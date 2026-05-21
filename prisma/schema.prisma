@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum CoinCategory {
+  MAINSTREAM
+  ALTCOIN
+  MEME
+  MINING
+  AI
+  RWA
+  DEPIN
+  STABLECOIN
+  OTHER
+}
+
+enum WatchStatus {
+  WATCHING
+  INTERESTED
+  HOLDING
+  ABANDONED
+}
+
+enum OperationType {
+  SPOT
+  SPOT_GRID
+  FUTURES
+  FUTURES_GRID
+  DCA
+  STABLE_EARN
+  OTHER
+}
+
+enum TradeDirection {
+  BUY
+  SELL
+  LONG
+  SHORT
+  NONE
+}
+
+enum MarginMode {
+  NONE
+  ISOLATED
+  CROSS
+}
+
+enum EmotionState {
+  CALM
+  ANXIOUS
+  FOMO
+  REVENGE
+  IMPULSIVE
+  FEAR
+  GREED
+  UNKNOWN
+}
+
+enum TradePlanStatus {
+  DRAFT
+  PASSED
+  MEDIUM_RISK
+  HIGH_RISK
+  EXTREME_RISK
+  EXECUTED
+  CANCELLED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  EXTREME
+}
+
+model WatchCoin {
+  id              String          @id @default(cuid())
+  symbol          String          @db.VarChar(32)
+  name            String          @db.VarChar(128)
+  category        CoinCategory    @default(OTHER)
+  watchReason     String          @db.Text
+  supportPrice    Decimal?        @db.Decimal(36, 18)
+  resistancePrice Decimal?        @db.Decimal(36, 18)
+  riskTags        String?         @db.Text
+  status          WatchStatus     @default(WATCHING)
+  notes           String?         @db.Text
+  tradePlans      TradePlan[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([symbol])
+  @@index([category])
+  @@index([status])
+}
+
+model TradePlan {
+  id                String             @id @default(cuid())
+  coinSymbol        String             @db.VarChar(32)
+  watchCoinId       String?
+  operationType     OperationType
+  direction         TradeDirection
+  plannedAmount     Decimal            @db.Decimal(36, 18)
+  totalCapital      Decimal            @db.Decimal(36, 18)
+  currentPrice      Decimal?           @db.Decimal(36, 18)
+  entryPrice        Decimal            @db.Decimal(36, 18)
+  stopLossPrice     Decimal?           @db.Decimal(36, 18)
+  takeProfitPrice   Decimal?           @db.Decimal(36, 18)
+  leverage          Decimal            @default(1) @db.Decimal(10, 4)
+  marginMode        MarginMode         @default(NONE)
+  reason            String             @db.Text
+  maxAcceptableLoss Decimal?           @db.Decimal(36, 18)
+  hasMacroEvent     Boolean            @default(false)
+  isChasingPrice    Boolean            @default(false)
+  hasStopLoss       Boolean            @default(false)
+  emotionState      EmotionState       @default(UNKNOWN)
+  status            TradePlanStatus    @default(DRAFT)
+  watchCoin         WatchCoin?         @relation(fields: [watchCoinId], references: [id], onDelete: SetNull)
+  riskChecks        RiskCheck[]
+  positionSizings   PositionSizing[]
+  tradeRecord       TradeRecord?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([coinSymbol])
+  @@index([watchCoinId])
+  @@index([operationType])
+  @@index([direction])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RiskCheck {
+  id          String     @id @default(cuid())
+  tradePlanId String
+  inputSnapshot Json?
+  score       Int
+  level       RiskLevel
+  reasons     Json
+  suggestion  String     @db.Text
+  tradePlan   TradePlan  @relation(fields: [tradePlanId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  @@index([tradePlanId])
+  @@index([level])
+  @@index([createdAt])
+}
+
+model PositionSizing {
+  id                        String     @id @default(cuid())
+  tradePlanId               String
+  inputSnapshot             Json?
+  isValid                   Boolean    @default(true)
+  validationErrors          Json?
+  positionValue             Decimal?   @db.Decimal(36, 18)
+  lossAmountAtStop          Decimal?   @db.Decimal(36, 18)
+  profitAmountAtTakeProfit  Decimal?   @db.Decimal(36, 18)
+  riskRewardRatio           Decimal?   @db.Decimal(18, 8)
+  lossPercentOfTotalCapital Decimal?   @db.Decimal(18, 8)
+  suggestion                String     @db.Text
+  tradePlan                 TradePlan  @relation(fields: [tradePlanId], references: [id], onDelete: Cascade)
+  createdAt                 DateTime   @default(now())
+
+  @@index([tradePlanId])
+  @@index([createdAt])
+}
+
+model TradeRecord {
+  id                String          @id @default(cuid())
+  tradePlanId       String?         @unique
+  coinSymbol        String          @db.VarChar(32)
+  operationType     OperationType
+  direction         TradeDirection
+  entryTime         DateTime
+  exitTime          DateTime?
+  entryPrice        Decimal         @db.Decimal(36, 18)
+  exitPrice         Decimal?        @db.Decimal(36, 18)
+  amount            Decimal         @db.Decimal(36, 18)
+  leverage          Decimal         @default(1) @db.Decimal(10, 4)
+  profitLossAmount  Decimal?        @db.Decimal(36, 18)
+  profitLossPercent Decimal?        @db.Decimal(18, 8)
+  followedPlan      Boolean         @default(false)
+  exitReason        String?         @db.Text
+  tradePlan         TradePlan?      @relation(fields: [tradePlanId], references: [id], onDelete: SetNull)
+  review            Review?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([coinSymbol])
+  @@index([operationType])
+  @@index([direction])
+  @@index([entryTime])
+}
+
+model Review {
+  id                 String       @id @default(cuid())
+  tradeRecordId      String       @unique
+  followedPlanReview String?      @db.Text
+  emotionReview      String?      @db.Text
+  mistake            String?      @db.Text
+  lesson             String?      @db.Text
+  nextAction         String?      @db.Text
+  tradeRecord        TradeRecord  @relation(fields: [tradeRecordId], references: [id], onDelete: Cascade)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model AssetSnapshot {
+  id               String    @id @default(cuid())
+  snapshotDate     DateTime
+  totalAssetCny    Decimal   @default(0) @db.Decimal(36, 18)
+  totalAssetUsdt   Decimal   @default(0) @db.Decimal(36, 18)
+  stablecoinAmount Decimal   @default(0) @db.Decimal(36, 18)
+  spotAmount       Decimal   @default(0) @db.Decimal(36, 18)
+  futuresMargin    Decimal   @default(0) @db.Decimal(36, 18)
+  earnAmount       Decimal   @default(0) @db.Decimal(36, 18)
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now())
+
+  @@index([snapshotDate])
+}
