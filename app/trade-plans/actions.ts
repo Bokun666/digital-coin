@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { calculatePositionSizing } from "@/src/lib/risk/positionSizingService";
 import { calculateRiskCheck } from "@/src/lib/risk/riskCheckService";
 import { prisma } from "@/src/lib/prisma";
 
@@ -361,6 +362,58 @@ export async function generateRiskCheck(tradePlanId: string) {
         },
       }),
     ]);
+  } catch (error) {
+    redirectWithError(getDatabaseErrorMessage(error));
+  }
+
+  revalidatePath("/trade-plans");
+  redirect("/trade-plans");
+}
+
+export async function generatePositionSizing(tradePlanId: string) {
+  if (!tradePlanId.trim()) {
+    redirectWithError("缺少交易计划 ID。");
+  }
+
+  try {
+    const tradePlan = await prisma.tradePlan.findUnique({
+      where: { id: tradePlanId },
+    });
+
+    if (!tradePlan) {
+      throw new Error("交易计划不存在，无法生成仓位计算。");
+    }
+
+    const positionSizing = calculatePositionSizing({
+      totalCapital: tradePlan.totalCapital,
+      plannedAmount: tradePlan.plannedAmount,
+      leverage: tradePlan.leverage,
+      entryPrice: tradePlan.entryPrice,
+      stopLossPrice: tradePlan.stopLossPrice,
+      takeProfitPrice: tradePlan.takeProfitPrice,
+      hasStopLoss: tradePlan.hasStopLoss,
+      direction: tradePlan.direction,
+      operationType: tradePlan.operationType,
+    });
+    const inputSnapshot = createRiskCheckInputSnapshot(tradePlan);
+
+    await prisma.positionSizing.create({
+      data: {
+        tradePlanId: tradePlan.id,
+        inputSnapshot,
+        isValid: positionSizing.isValid,
+        validationErrors:
+          positionSizing.errors.length > 0
+            ? positionSizing.errors
+            : Prisma.JsonNull,
+        positionValue: positionSizing.positionValue,
+        lossAmountAtStop: positionSizing.lossAmountAtStop,
+        profitAmountAtTakeProfit: positionSizing.profitAmountAtTakeProfit,
+        riskRewardRatio: positionSizing.riskRewardRatio,
+        lossPercentOfTotalCapital: positionSizing.lossPercentOfTotalCapital,
+        suggestion: positionSizing.suggestion,
+      },
+    });
   } catch (error) {
     redirectWithError(getDatabaseErrorMessage(error));
   }

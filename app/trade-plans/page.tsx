@@ -5,6 +5,7 @@ import { prisma } from "@/src/lib/prisma";
 import {
   createTradePlan,
   deleteTradePlan,
+  generatePositionSizing,
   generateRiskCheck,
 } from "./actions";
 
@@ -125,6 +126,22 @@ function getRiskLevelClass(level: string): string {
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
+function isGreaterThanTwo(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") {
+    return false;
+  }
+
+  return Number(value) > 2;
+}
+
+function isLessThanOne(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") {
+    return false;
+  }
+
+  return Number(value) < 1;
+}
+
 export default async function TradePlansPage({
   searchParams,
 }: TradePlansPageProps) {
@@ -135,6 +152,10 @@ export default async function TradePlansPage({
 
   const tradePlans = await prisma.tradePlan.findMany({
     include: {
+      positionSizings: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       riskChecks: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -371,7 +392,7 @@ export default async function TradePlansPage({
 
         <section className="overflow-hidden rounded border border-zinc-200 bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1900px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[2500px] border-collapse text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">币种</th>
@@ -391,6 +412,14 @@ export default async function TradePlansPage({
                   <th className="px-4 py-3 font-medium">最近风险等级</th>
                   <th className="px-4 py-3 font-medium">风险原因</th>
                   <th className="px-4 py-3 font-medium">系统建议</th>
+                  <th className="px-4 py-3 font-medium">最近仓位价值</th>
+                  <th className="px-4 py-3 font-medium">止损亏损金额</th>
+                  <th className="px-4 py-3 font-medium">止盈盈利金额</th>
+                  <th className="px-4 py-3 font-medium">盈亏比</th>
+                  <th className="px-4 py-3 font-medium">
+                    止损亏损占总资金比例
+                  </th>
+                  <th className="px-4 py-3 font-medium">仓位建议</th>
                   <th className="px-4 py-3 font-medium">计划状态</th>
                   <th className="px-4 py-3 font-medium">创建时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
@@ -401,7 +430,7 @@ export default async function TradePlansPage({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-zinc-500"
-                      colSpan={20}
+                      colSpan={26}
                     >
                       暂无交易计划
                     </td>
@@ -409,6 +438,13 @@ export default async function TradePlansPage({
                 ) : (
                   tradePlans.map((plan) => {
                     const latestRiskCheck = plan.riskChecks[0];
+                    const latestPositionSizing = plan.positionSizings[0];
+                    const isPositionTooHeavy = isGreaterThanTwo(
+                      latestPositionSizing?.lossPercentOfTotalCapital,
+                    );
+                    const hasLowRiskRewardRatio = isLessThanOne(
+                      latestPositionSizing?.riskRewardRatio,
+                    );
 
                     return (
                       <tr
@@ -506,6 +542,81 @@ export default async function TradePlansPage({
                           )}
                         </td>
                         <td className="px-4 py-4">
+                          {latestPositionSizing
+                            ? formatOptionalValue(
+                                latestPositionSizing.positionValue,
+                              )
+                            : "未计算"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestPositionSizing
+                            ? formatOptionalValue(
+                                latestPositionSizing.lossAmountAtStop,
+                              )
+                            : "未计算"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestPositionSizing
+                            ? formatOptionalValue(
+                                latestPositionSizing.profitAmountAtTakeProfit,
+                              )
+                            : "未计算"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestPositionSizing ? (
+                            <div className="grid gap-2">
+                              <span>
+                                {formatOptionalValue(
+                                  latestPositionSizing.riskRewardRatio,
+                                )}
+                              </span>
+                              {hasLowRiskRewardRatio ? (
+                                <span className="inline-flex w-fit rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+                                  盈亏比偏低
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            "未计算"
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestPositionSizing ? (
+                            <div className="grid gap-2">
+                              <span>
+                                {formatOptionalValue(
+                                  latestPositionSizing.lossPercentOfTotalCapital,
+                                )}
+                              </span>
+                              {isPositionTooHeavy ? (
+                                <span className="inline-flex w-fit rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                                  止损亏损超过总资金 2%，仓位可能过重。
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            "未计算"
+                          )}
+                        </td>
+                        <td className="max-w-md px-4 py-4 text-zinc-700">
+                          {latestPositionSizing ? (
+                            <div className="grid gap-2">
+                              {isPositionTooHeavy ? (
+                                <div className="inline-flex w-fit rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                                  仓位过重
+                                </div>
+                              ) : null}
+                              <div>
+                                {formatOptionalValue(
+                                  latestPositionSizing.suggestion,
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            "未计算"
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
                           {getOptionLabel(statusOptions, plan.status)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
@@ -521,6 +632,19 @@ export default async function TradePlansPage({
                                 className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
                               >
                                 生成风险检查
+                              </button>
+                            </form>
+                            <form
+                              action={generatePositionSizing.bind(
+                                null,
+                                plan.id,
+                              )}
+                            >
+                              <button
+                                type="submit"
+                                className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                              >
+                                生成仓位计算
                               </button>
                             </form>
                             <form action={deleteTradePlan.bind(null, plan.id)}>
