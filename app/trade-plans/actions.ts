@@ -167,13 +167,14 @@ function normalizeTradePlanForm(formData: FormData) {
     getText(formData, "maxAcceptableLoss"),
     "最大可接受亏损",
   );
-  const leverage = parseOptionalDecimal(getText(formData, "leverage"), "杠杆倍数")
-    ?? new Prisma.Decimal(1);
+  const inputLeverage =
+    parseOptionalDecimal(getText(formData, "leverage"), "杠杆倍数") ??
+    new Prisma.Decimal(1);
 
   assertGreaterThanZero(plannedAmount, "计划投入金额");
   assertGreaterThanZero(totalCapital, "当前总资金");
   assertGreaterThanZero(entryPrice, "计划入场价");
-  assertGreaterThanOrEqualOne(leverage, "杠杆倍数");
+  assertGreaterThanOrEqualOne(inputLeverage, "杠杆倍数");
 
   if (hasStopLoss) {
     if (!stopLossPrice) {
@@ -185,17 +186,23 @@ function normalizeTradePlanForm(formData: FormData) {
 
   const isFutures =
     operationType === "FUTURES" || operationType === "FUTURES_GRID";
-  const marginMode = isFutures ? marginModeInput : "NONE";
 
   if (isFutures) {
     if (direction !== "LONG" && direction !== "SHORT") {
-      throw new Error("期货计划的方向必须是 LONG 或 SHORT。");
+      throw new Error("合约交易计划的方向必须是 LONG 或 SHORT。");
     }
 
-    if (marginMode === "NONE") {
-      throw new Error("期货计划的保证金模式不能是 NONE。");
+    if (marginModeInput === "NONE") {
+      throw new Error("合约交易计划的保证金模式不能是 NONE。");
     }
   }
+
+  if (!isFutures && (direction === "LONG" || direction === "SHORT")) {
+    throw new Error("非合约交易计划的方向不能是 LONG 或 SHORT。");
+  }
+
+  const leverage = isFutures ? inputLeverage : new Prisma.Decimal(1);
+  const marginMode = isFutures ? marginModeInput : "NONE";
 
   return {
     coinSymbol,

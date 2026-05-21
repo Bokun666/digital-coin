@@ -35,7 +35,7 @@ export default function Home() {
             </div>
             <div className="mt-3 text-xl font-semibold">交易计划</div>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
-              记录每次交易前的入场理由、止损止盈、仓位和风险要素
+              记录每次交易前的入场理由、止损止盈、仓位和风险要素。
             </p>
           </Link>
         </section>
