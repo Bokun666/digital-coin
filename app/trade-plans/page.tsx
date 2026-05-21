@@ -2,7 +2,11 @@ import Link from "next/link";
 
 import { prisma } from "@/src/lib/prisma";
 
-import { createTradePlan, deleteTradePlan } from "./actions";
+import {
+  createTradePlan,
+  deleteTradePlan,
+  generateRiskCheck,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +45,22 @@ const emotionStateOptions = [
   { value: "UNKNOWN", label: "未知" },
 ];
 
-const statusOptions = [{ value: "DRAFT", label: "草稿" }];
+const statusOptions = [
+  { value: "DRAFT", label: "草稿" },
+  { value: "PASSED", label: "已通过" },
+  { value: "MEDIUM_RISK", label: "中风险" },
+  { value: "HIGH_RISK", label: "高风险" },
+  { value: "EXTREME_RISK", label: "极高风险" },
+  { value: "EXECUTED", label: "已执行" },
+  { value: "CANCELLED", label: "已取消" },
+];
+
+const riskLevelOptions = [
+  { value: "LOW", label: "低风险" },
+  { value: "MEDIUM", label: "中风险" },
+  { value: "HIGH", label: "高风险" },
+  { value: "EXTREME", label: "极高风险" },
+];
 
 type TradePlansPageProps = {
   searchParams?: Promise<{
@@ -74,6 +93,38 @@ function formatDate(value: Date): string {
   });
 }
 
+function formatReasons(value: unknown): string {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).join("；");
+  }
+
+  return JSON.stringify(value);
+}
+
+function getRiskLevelClass(level: string): string {
+  if (level === "EXTREME") {
+    return "border-red-700 bg-red-100 text-red-900";
+  }
+
+  if (level === "HIGH") {
+    return "border-red-300 bg-red-50 text-red-700";
+  }
+
+  if (level === "MEDIUM") {
+    return "border-amber-300 bg-amber-50 text-amber-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-700";
+}
+
 export default async function TradePlansPage({
   searchParams,
 }: TradePlansPageProps) {
@@ -83,6 +134,12 @@ export default async function TradePlansPage({
     : resolvedSearchParams.error;
 
   const tradePlans = await prisma.tradePlan.findMany({
+    include: {
+      riskChecks: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
     orderBy: {
       createdAt: "desc",
     },
@@ -314,7 +371,7 @@ export default async function TradePlansPage({
 
         <section className="overflow-hidden rounded border border-zinc-200 bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1500px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1900px] border-collapse text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">币种</th>
@@ -330,6 +387,10 @@ export default async function TradePlansPage({
                   <th className="px-4 py-3 font-medium">是否追涨</th>
                   <th className="px-4 py-3 font-medium">宏观事件</th>
                   <th className="px-4 py-3 font-medium">设置止损</th>
+                  <th className="px-4 py-3 font-medium">最近风险分</th>
+                  <th className="px-4 py-3 font-medium">最近风险等级</th>
+                  <th className="px-4 py-3 font-medium">风险原因</th>
+                  <th className="px-4 py-3 font-medium">系统建议</th>
                   <th className="px-4 py-3 font-medium">计划状态</th>
                   <th className="px-4 py-3 font-medium">创建时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
@@ -340,80 +401,128 @@ export default async function TradePlansPage({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-zinc-500"
-                      colSpan={16}
+                      colSpan={20}
                     >
                       暂无交易计划
                     </td>
                   </tr>
                 ) : (
-                  tradePlans.map((plan) => (
-                    <tr
-                      key={plan.id}
-                      className="border-b border-zinc-100 last:border-0"
-                    >
-                      <td className="px-4 py-4 font-semibold text-zinc-950">
-                        {plan.coinSymbol}
-                      </td>
-                      <td className="px-4 py-4">
-                        {getOptionLabel(
-                          operationTypeOptions,
-                          plan.operationType,
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        {getOptionLabel(directionOptions, plan.direction)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatOptionalValue(plan.plannedAmount)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatOptionalValue(plan.entryPrice)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatOptionalValue(plan.stopLossPrice)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatOptionalValue(plan.takeProfitPrice)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatOptionalValue(plan.leverage)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {getOptionLabel(marginModeOptions, plan.marginMode)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {getOptionLabel(
-                          emotionStateOptions,
-                          plan.emotionState,
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatBoolean(plan.isChasingPrice)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatBoolean(plan.hasMacroEvent)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatBoolean(plan.hasStopLoss)}
-                      </td>
-                      <td className="px-4 py-4">
-                        {getOptionLabel(statusOptions, plan.status)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
-                        {formatDate(plan.createdAt)}
-                      </td>
-                      <td className="px-4 py-4">
-                        <form action={deleteTradePlan.bind(null, plan.id)}>
-                          <button
-                            type="submit"
-                            className="h-9 rounded border border-red-200 px-3 text-sm font-medium text-red-700 hover:bg-red-50"
-                          >
-                            删除
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))
+                  tradePlans.map((plan) => {
+                    const latestRiskCheck = plan.riskChecks[0];
+
+                    return (
+                      <tr
+                        key={plan.id}
+                        className="border-b border-zinc-100 last:border-0"
+                      >
+                        <td className="px-4 py-4 font-semibold text-zinc-950">
+                          {plan.coinSymbol}
+                        </td>
+                        <td className="px-4 py-4">
+                          {getOptionLabel(
+                            operationTypeOptions,
+                            plan.operationType,
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          {getOptionLabel(directionOptions, plan.direction)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatOptionalValue(plan.plannedAmount)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatOptionalValue(plan.entryPrice)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatOptionalValue(plan.stopLossPrice)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatOptionalValue(plan.takeProfitPrice)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatOptionalValue(plan.leverage)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {getOptionLabel(marginModeOptions, plan.marginMode)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {getOptionLabel(
+                            emotionStateOptions,
+                            plan.emotionState,
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatBoolean(plan.isChasingPrice)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatBoolean(plan.hasMacroEvent)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatBoolean(plan.hasStopLoss)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestRiskCheck ? latestRiskCheck.score : "未检查"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {latestRiskCheck ? (
+                            <span
+                              className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${getRiskLevelClass(
+                                latestRiskCheck.level,
+                              )}`}
+                            >
+                              {getOptionLabel(
+                                riskLevelOptions,
+                                latestRiskCheck.level,
+                              )}
+                              {latestRiskCheck.level === "EXTREME"
+                                ? "，不建议操作"
+                                : ""}
+                            </span>
+                          ) : (
+                            "未检查"
+                          )}
+                        </td>
+                        <td className="max-w-md px-4 py-4 text-zinc-700">
+                          {latestRiskCheck
+                            ? formatReasons(latestRiskCheck.reasons)
+                            : "未检查"}
+                        </td>
+                        <td className="max-w-md px-4 py-4 text-zinc-700">
+                          {latestRiskCheck
+                            ? formatOptionalValue(latestRiskCheck.suggestion)
+                            : "未检查"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {getOptionLabel(statusOptions, plan.status)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
+                          {formatDate(plan.createdAt)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-col gap-2">
+                            <form
+                              action={generateRiskCheck.bind(null, plan.id)}
+                            >
+                              <button
+                                type="submit"
+                                className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                              >
+                                生成风险检查
+                              </button>
+                            </form>
+                            <form action={deleteTradePlan.bind(null, plan.id)}>
+                              <button
+                                type="submit"
+                                className="h-9 rounded border border-red-200 px-3 text-sm font-medium text-red-700 hover:bg-red-50"
+                              >
+                                删除
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

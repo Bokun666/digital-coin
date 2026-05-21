@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { calculateRiskCheck } from "@/src/lib/risk/riskCheckService";
 import { prisma } from "@/src/lib/prisma";
 
 const OPERATION_TYPES = [
@@ -33,6 +34,13 @@ type OperationType = (typeof OPERATION_TYPES)[number];
 type TradeDirection = (typeof TRADE_DIRECTIONS)[number];
 type MarginMode = (typeof MARGIN_MODES)[number];
 type EmotionState = (typeof EMOTION_STATES)[number];
+
+const RISK_LEVEL_TO_TRADE_PLAN_STATUS = {
+  LOW: "PASSED",
+  MEDIUM: "MEDIUM_RISK",
+  HIGH: "HIGH_RISK",
+  EXTREME: "EXTREME_RISK",
+} as const;
 
 function getText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -270,6 +278,61 @@ export async function deleteTradePlan(id: string) {
     await prisma.tradePlan.delete({
       where: { id },
     });
+  } catch (error) {
+    redirectWithError(getDatabaseErrorMessage(error));
+  }
+
+  revalidatePath("/trade-plans");
+  redirect("/trade-plans");
+}
+
+export async function generateRiskCheck(tradePlanId: string) {
+  if (!tradePlanId.trim()) {
+    redirectWithError("缺少交易计划 ID。");
+  }
+
+  try {
+    const tradePlan = await prisma.tradePlan.findUnique({
+      where: { id: tradePlanId },
+    });
+
+    if (!tradePlan) {
+      throw new Error("交易计划不存在，无法生成风险检查。");
+    }
+
+    const riskCheck = calculateRiskCheck({
+      operationType: tradePlan.operationType,
+      direction: tradePlan.direction,
+      plannedAmount: tradePlan.plannedAmount,
+      totalCapital: tradePlan.totalCapital,
+      entryPrice: tradePlan.entryPrice,
+      stopLossPrice: tradePlan.stopLossPrice,
+      takeProfitPrice: tradePlan.takeProfitPrice,
+      leverage: tradePlan.leverage,
+      marginMode: tradePlan.marginMode,
+      hasStopLoss: tradePlan.hasStopLoss,
+      hasMacroEvent: tradePlan.hasMacroEvent,
+      isChasingPrice: tradePlan.isChasingPrice,
+      emotionState: tradePlan.emotionState,
+    });
+
+    await prisma.$transaction([
+      prisma.riskCheck.create({
+        data: {
+          tradePlanId: tradePlan.id,
+          score: riskCheck.score,
+          level: riskCheck.level,
+          reasons: riskCheck.reasons,
+          suggestion: riskCheck.suggestion,
+        },
+      }),
+      prisma.tradePlan.update({
+        where: { id: tradePlan.id },
+        data: {
+          status: RISK_LEVEL_TO_TRADE_PLAN_STATUS[riskCheck.level],
+        },
+      }),
+    ]);
   } catch (error) {
     redirectWithError(getDatabaseErrorMessage(error));
   }
