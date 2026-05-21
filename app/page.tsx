@@ -7,7 +7,7 @@ export default function Home() {
         <header className="border-b border-zinc-200 pb-8">
           <p className="text-sm font-medium text-zinc-500">DigitalCoin</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-normal">
-            交易辅助与风控复盘系统
+            手动交易辅助与风控复盘系统
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
             用于记录自选币、交易计划、风险检查、仓位计算、交易记录和复盘。
@@ -23,6 +23,19 @@ export default function Home() {
             <div className="mt-3 text-xl font-semibold">自选币</div>
             <p className="mt-2 text-sm leading-6 text-zinc-600">
               管理关注币种、关键价位、风险标签和观察状态。
+            </p>
+          </Link>
+
+          <Link
+            href="/trade-plans"
+            className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
+          >
+            <div className="text-sm font-medium text-zinc-500">
+              /trade-plans
+            </div>
+            <div className="mt-3 text-xl font-semibold">交易计划</div>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              记录每次交易前的入场理由、止损止盈、仓位和风险要素
             </p>
           </Link>
         </section>
