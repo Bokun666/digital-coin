@@ -488,9 +488,22 @@ export default async function TradePlansPage({
                             : "未检查"}
                         </td>
                         <td className="max-w-md px-4 py-4 text-zinc-700">
-                          {latestRiskCheck
-                            ? formatOptionalValue(latestRiskCheck.suggestion)
-                            : "未检查"}
+                          {latestRiskCheck ? (
+                            <div className="grid gap-2">
+                              {latestRiskCheck.level === "EXTREME" ? (
+                                <div className="inline-flex w-fit rounded border border-red-700 bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">
+                                  不建议操作
+                                </div>
+                              ) : null}
+                              <div>
+                                {formatOptionalValue(
+                                  latestRiskCheck.suggestion,
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            "未检查"
+                          )}
                         </td>
                         <td className="px-4 py-4">
                           {getOptionLabel(statusOptions, plan.status)}

@@ -256,6 +256,32 @@ function getDatabaseErrorMessage(error: unknown): string {
   return "操作失败，请稍后重试。";
 }
 
+function createRiskCheckInputSnapshot(
+  tradePlan: NonNullable<
+    Awaited<ReturnType<typeof prisma.tradePlan.findUnique>>
+  >,
+): Prisma.InputJsonObject {
+  return {
+    tradePlanId: tradePlan.id,
+    coinSymbol: tradePlan.coinSymbol,
+    operationType: tradePlan.operationType,
+    direction: tradePlan.direction,
+    plannedAmount: tradePlan.plannedAmount.toString(),
+    totalCapital: tradePlan.totalCapital.toString(),
+    currentPrice: tradePlan.currentPrice?.toString() ?? null,
+    entryPrice: tradePlan.entryPrice.toString(),
+    stopLossPrice: tradePlan.stopLossPrice?.toString() ?? null,
+    takeProfitPrice: tradePlan.takeProfitPrice?.toString() ?? null,
+    leverage: tradePlan.leverage.toString(),
+    marginMode: tradePlan.marginMode,
+    hasStopLoss: tradePlan.hasStopLoss,
+    hasMacroEvent: tradePlan.hasMacroEvent,
+    isChasingPrice: tradePlan.isChasingPrice,
+    emotionState: tradePlan.emotionState,
+    createdAt: tradePlan.createdAt.toISOString(),
+  };
+}
+
 export async function createTradePlan(formData: FormData) {
   try {
     const data = normalizeTradePlanForm(formData);
@@ -315,11 +341,13 @@ export async function generateRiskCheck(tradePlanId: string) {
       isChasingPrice: tradePlan.isChasingPrice,
       emotionState: tradePlan.emotionState,
     });
+    const inputSnapshot = createRiskCheckInputSnapshot(tradePlan);
 
     await prisma.$transaction([
       prisma.riskCheck.create({
         data: {
           tradePlanId: tradePlan.id,
+          inputSnapshot,
           score: riskCheck.score,
           level: riskCheck.level,
           reasons: riskCheck.reasons,
