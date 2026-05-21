@@ -4,6 +4,8 @@ import { prisma } from "@/src/lib/prisma";
 
 import { createWatchCoin, deleteWatchCoin } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 const categoryOptions = [
   { value: "MAINSTREAM", label: "主流币" },
   { value: "ALTCOIN", label: "山寨币" },
@@ -29,13 +31,16 @@ type WatchlistPageProps = {
   }>;
 };
 
+function getOptionLabel(
+  options: Array<{ value: string; label: string }>,
+  value: string,
+): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
 function formatOptionalValue(value: unknown): string {
   if (value === null || value === undefined || value === "") {
     return "-";
-  }
-
-  if (typeof value === "object" && "toString" in value) {
-    return value.toString();
   }
 
   return String(value);
@@ -77,7 +82,7 @@ export default async function WatchlistPage({
             </h1>
           </div>
           <div className="rounded border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-            共 {watchCoins.length} 个
+            当前共 {watchCoins.length} 个
           </div>
         </header>
 
@@ -225,7 +230,10 @@ export default async function WatchlistPage({
               <tbody>
                 {watchCoins.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-8 text-center text-zinc-500" colSpan={11}>
+                    <td
+                      className="px-4 py-8 text-center text-zinc-500"
+                      colSpan={11}
+                    >
                       暂无自选币
                     </td>
                   </tr>
@@ -239,8 +247,12 @@ export default async function WatchlistPage({
                         {coin.symbol}
                       </td>
                       <td className="px-4 py-4">{coin.name}</td>
-                      <td className="px-4 py-4">{coin.category}</td>
-                      <td className="px-4 py-4">{coin.status}</td>
+                      <td className="px-4 py-4">
+                        {getOptionLabel(categoryOptions, coin.category)}
+                      </td>
+                      <td className="px-4 py-4">
+                        {getOptionLabel(statusOptions, coin.status)}
+                      </td>
                       <td className="max-w-xs px-4 py-4 text-zinc-700">
                         {formatOptionalValue(coin.watchReason)}
                       </td>

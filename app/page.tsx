@@ -9,6 +9,9 @@ export default function Home() {
           <h1 className="mt-3 text-4xl font-semibold tracking-normal">
             交易辅助与风控复盘系统
           </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-600">
+            用于记录自选币、交易计划、风险检查、仓位计算、交易记录和复盘。
+          </p>
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2">
@@ -18,6 +21,9 @@ export default function Home() {
           >
             <div className="text-sm font-medium text-zinc-500">/watchlist</div>
             <div className="mt-3 text-xl font-semibold">自选币</div>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              管理关注币种、关键价位、风险标签和观察状态。
+            </p>
           </Link>
         </section>
       </div>

@@ -99,7 +99,7 @@ function normalizeWatchCoinForm(formData: FormData) {
     name,
     category,
     status,
-    watchReason,
+    watchReason: watchReason || "手动录入",
     riskTags: riskTags || null,
     notes: notes || null,
     supportPrice,

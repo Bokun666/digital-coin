@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DigitalCoin
 
-## Getting Started
+DigitalCoin 是一个加密货币交易辅助、AI 分析、策略生成、风控复盘与因子权重演化系统。
 
-First, run the development server:
+当前阶段：Phase 1 手动录入版 MVP。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 当前功能
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 自选币管理
+- 交易计划模型
+- 风险检查模型
+- 仓位计算模型
+- 交易记录模型
+- 复盘模型
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 安全边界
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 不自动下单
+- 不自动转账
+- 不自动提现
+- 不保存钱包私钥
+- 不保存助记词
+- 不接入带提现权限的 API Key
+- GPT 只能做分析，不能直接执行交易
 
-## Learn More
+## 技术栈
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js
+- TypeScript
+- React
+- Prisma
+- MySQL/MariaDB
+- pnpm
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 本地启动
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. 安装依赖：
 
-## Deploy on Vercel
+   ```bash
+   pnpm install
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. 配置 `.env.local`：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```env
+   DATABASE_URL="mysql://user:password@localhost:3306/digital_coin"
+   ```
+
+3. 生成 Prisma Client：
+
+   ```bash
+   pnpm prisma generate
+   ```
+
+4. 执行数据库迁移：
+
+   ```bash
+   pnpm prisma migrate dev
+   ```
+
+5. 启动开发服务：
+
+   ```bash
+   pnpm dev
+   ```
+
+## 数据库说明
+
+项目使用 MySQL/MariaDB，Prisma datasource provider 保持为 `mysql`，运行时通过 `@prisma/adapter-mariadb` 初始化 Prisma Client。请只在本地环境文件中配置真实数据库连接，不要提交真实密码或密钥。
