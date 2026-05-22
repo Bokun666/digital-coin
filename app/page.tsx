@@ -70,6 +70,7 @@ export default async function Home() {
     recentTradePlans,
     recentTradeRecords,
     recentReviews,
+    latestAssetSnapshot,
   ] = await Promise.all([
     prisma.watchCoin.count(),
     prisma.tradePlan.count(),
@@ -103,6 +104,9 @@ export default async function Home() {
       include: {
         tradeRecord: true,
       },
+    }),
+    prisma.assetSnapshot.findFirst({
+      orderBy: { snapshotDate: "desc" },
     }),
   ]);
 
@@ -151,7 +155,7 @@ export default async function Home() {
 
         <section>
           <h2 className="text-lg font-semibold">模块入口</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
             <Link
               href="/watchlist"
               className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
@@ -177,7 +181,92 @@ export default async function Home() {
                 记录交易计划、风险检查、仓位计算、交易记录和复盘。
               </p>
             </Link>
+
+            <Link
+              href="/assets"
+              className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
+            >
+              <div className="text-sm font-medium text-zinc-500">/assets</div>
+              <div className="mt-3 text-xl font-semibold">资产快照</div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                手动记录总资产、稳定币、现货、合约保证金和理财金额。
+              </p>
+            </Link>
           </div>
+        </section>
+
+        <section className="rounded border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">最新资产概况</h2>
+            <Link
+              href="/assets"
+              className="text-sm font-medium text-zinc-500 hover:text-zinc-900"
+            >
+              管理资产快照
+            </Link>
+          </div>
+          {latestAssetSnapshot ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  最新总资产 CNY
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.totalAssetCny)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  最新总资产 USDT
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.totalAssetUsdt)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  稳定币金额
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.stablecoinAmount)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  现货金额
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.spotAmount)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  合约保证金
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.futuresMargin)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4">
+                <div className="text-xs font-medium text-zinc-500">
+                  理财金额
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDecimal(latestAssetSnapshot.earnAmount)}
+                </div>
+              </div>
+              <div className="rounded border border-zinc-100 p-4 sm:col-span-2">
+                <div className="text-xs font-medium text-zinc-500">
+                  快照时间
+                </div>
+                <div className="mt-2 text-xl font-semibold">
+                  {formatDate(latestAssetSnapshot.snapshotDate)}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-zinc-500">暂无资产快照</p>
+          )}
         </section>
 
         <section className="rounded border border-zinc-200 bg-white p-5">
