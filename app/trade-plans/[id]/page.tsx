@@ -9,6 +9,7 @@ import {
   generateReview,
   generateTradeRecord,
   updateTradeRecord,
+  updateReview,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -717,32 +718,99 @@ export default async function TradePlanDetailPage({
 
         <DetailSection title="复盘 Review">
           {review ? (
-            <InfoGrid
-              items={[
-                {
-                  label: "是否遵守计划复盘",
-                  value: formatOptionalValue(review.followedPlanReview),
-                },
-                {
-                  label: "情绪状态复盘",
-                  value: formatOptionalValue(review.emotionReview),
-                },
-                {
-                  label: "错误总结",
-                  value: formatOptionalValue(review.mistake),
-                },
-                {
-                  label: "经验教训",
-                  value: formatOptionalValue(review.lesson),
-                },
-                {
-                  label: "下次改进",
-                  value: formatOptionalValue(review.nextAction),
-                },
-                { label: "创建时间", value: formatDate(review.createdAt) },
-                { label: "更新时间", value: formatDate(review.updatedAt) },
-              ]}
-            />
+            <div className="grid gap-6">
+              <InfoGrid
+                items={[
+                  {
+                    label: "是否遵守计划复盘",
+                    value: formatOptionalValue(review.followedPlanReview),
+                  },
+                  {
+                    label: "情绪状态复盘",
+                    value: formatOptionalValue(review.emotionReview),
+                  },
+                  {
+                    label: "错误总结",
+                    value: formatOptionalValue(review.mistake),
+                  },
+                  {
+                    label: "经验教训",
+                    value: formatOptionalValue(review.lesson),
+                  },
+                  {
+                    label: "下次改进",
+                    value: formatOptionalValue(review.nextAction),
+                  },
+                  { label: "创建时间", value: formatDate(review.createdAt) },
+                  { label: "更新时间", value: formatDate(review.updatedAt) },
+                ]}
+              />
+
+              <form
+                action={updateReview.bind(null, review.id)}
+                className="grid gap-4 rounded border border-zinc-200 p-4"
+              >
+                <h3 className="text-base font-semibold text-zinc-950">
+                  编辑复盘
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  复盘内容用于后续总结交易错误和优化策略，请尽量写清楚当时判断、情绪状态、执行偏差和下次改进。
+                </p>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  是否遵守计划复盘
+                  <textarea
+                    name="followedPlanReview"
+                    rows={3}
+                    defaultValue={review.followedPlanReview ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  情绪状态复盘
+                  <textarea
+                    name="emotionReview"
+                    rows={3}
+                    defaultValue={review.emotionReview ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  错误总结
+                  <textarea
+                    name="mistake"
+                    rows={3}
+                    defaultValue={review.mistake ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  经验教训
+                  <textarea
+                    name="lesson"
+                    rows={3}
+                    defaultValue={review.lesson ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  下次改进
+                  <textarea
+                    name="nextAction"
+                    rows={3}
+                    defaultValue={review.nextAction ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <div>
+                  <ActionButton>保存复盘</ActionButton>
+                </div>
+              </form>
+            </div>
           ) : tradeRecord ? (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-zinc-600">尚未生成复盘</p>

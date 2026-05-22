@@ -734,3 +734,80 @@ export async function generateReview(tradeRecordId: string) {
 
   redirect("/trade-plans");
 }
+
+export async function updateReview(reviewId: string, formData: FormData) {
+  if (!reviewId.trim()) {
+    redirectWithError("缺少复盘记录 ID。");
+  }
+
+  let tradePlanId: string | null = null;
+
+  try {
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId },
+      include: {
+        tradeRecord: true,
+      },
+    });
+
+    if (!review) {
+      throw new Error("复盘记录不存在，无法更新。");
+    }
+
+    tradePlanId = review.tradeRecord.tradePlanId;
+
+    const followedPlanReview = getText(formData, "followedPlanReview");
+    const emotionReview = getText(formData, "emotionReview");
+    const mistake = getText(formData, "mistake");
+    const lesson = getText(formData, "lesson");
+    const nextAction = getText(formData, "nextAction");
+
+    if (!followedPlanReview) {
+      throw new Error("是否遵守计划复盘不能为空。");
+    }
+
+    if (!emotionReview) {
+      throw new Error("情绪状态复盘不能为空。");
+    }
+
+    if (!mistake) {
+      throw new Error("错误总结不能为空。");
+    }
+
+    if (!lesson) {
+      throw new Error("经验教训不能为空。");
+    }
+
+    if (!nextAction) {
+      throw new Error("下次改进不能为空。");
+    }
+
+    await prisma.review.update({
+      where: { id: review.id },
+      data: {
+        followedPlanReview,
+        emotionReview,
+        mistake,
+        lesson,
+        nextAction,
+      },
+    });
+  } catch (error) {
+    const message = getDatabaseErrorMessage(error);
+
+    if (tradePlanId) {
+      redirectWithTradePlanError(tradePlanId, message);
+    }
+
+    redirectWithError(message);
+  }
+
+  revalidatePath("/trade-plans");
+
+  if (tradePlanId) {
+    revalidatePath(`/trade-plans/${tradePlanId}`);
+    redirect(`/trade-plans/${tradePlanId}`);
+  }
+
+  redirect("/trade-plans");
+}
