@@ -8,6 +8,7 @@ import {
   generateRiskCheck,
   generateReview,
   generateTradeRecord,
+  updateTradeRecord,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +101,20 @@ function formatDate(value: Date): string {
 
 function formatOptionalDate(value: Date | null | undefined): string {
   return value ? formatDate(value) : "-";
+}
+
+function formatDateTimeLocal(value: Date | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function formatReasons(value: unknown): string {
@@ -513,49 +528,180 @@ export default async function TradePlanDetailPage({
 
         <DetailSection title="交易记录 TradeRecord">
           {tradeRecord ? (
-            <InfoGrid
-              items={[
-                { label: "入场时间", value: formatDate(tradeRecord.entryTime) },
-                {
-                  label: "出场时间",
-                  value: formatOptionalDate(tradeRecord.exitTime),
-                },
-                {
-                  label: "入场价",
-                  value: formatOptionalValue(tradeRecord.entryPrice),
-                },
-                {
-                  label: "出场价",
-                  value: formatOptionalValue(tradeRecord.exitPrice),
-                },
-                {
-                  label: "投入金额",
-                  value: formatOptionalValue(tradeRecord.amount),
-                },
-                {
-                  label: "杠杆倍数",
-                  value: formatOptionalValue(tradeRecord.leverage),
-                },
-                {
-                  label: "盈亏金额",
-                  value: formatOptionalValue(tradeRecord.profitLossAmount),
-                },
-                {
-                  label: "盈亏比例",
-                  value: formatOptionalValue(tradeRecord.profitLossPercent),
-                },
-                {
-                  label: "是否遵守计划",
-                  value: formatBoolean(tradeRecord.followedPlan),
-                },
-                {
-                  label: "出场原因",
-                  value: formatOptionalValue(tradeRecord.exitReason),
-                },
-                { label: "创建时间", value: formatDate(tradeRecord.createdAt) },
-                { label: "更新时间", value: formatDate(tradeRecord.updatedAt) },
-              ]}
-            />
+            <div className="grid gap-6">
+              <InfoGrid
+                items={[
+                  {
+                    label: "入场时间",
+                    value: formatDate(tradeRecord.entryTime),
+                  },
+                  {
+                    label: "出场时间",
+                    value: formatOptionalDate(tradeRecord.exitTime),
+                  },
+                  {
+                    label: "入场价",
+                    value: formatOptionalValue(tradeRecord.entryPrice),
+                  },
+                  {
+                    label: "出场价",
+                    value: formatOptionalValue(tradeRecord.exitPrice),
+                  },
+                  {
+                    label: "投入金额",
+                    value: formatOptionalValue(tradeRecord.amount),
+                  },
+                  {
+                    label: "杠杆倍数",
+                    value: formatOptionalValue(tradeRecord.leverage),
+                  },
+                  {
+                    label: "盈亏金额",
+                    value: formatOptionalValue(tradeRecord.profitLossAmount),
+                  },
+                  {
+                    label: "盈亏比例",
+                    value: formatOptionalValue(tradeRecord.profitLossPercent),
+                  },
+                  {
+                    label: "是否遵守计划",
+                    value: formatBoolean(tradeRecord.followedPlan),
+                  },
+                  {
+                    label: "出场原因",
+                    value: formatOptionalValue(tradeRecord.exitReason),
+                  },
+                  {
+                    label: "创建时间",
+                    value: formatDate(tradeRecord.createdAt),
+                  },
+                  {
+                    label: "更新时间",
+                    value: formatDate(tradeRecord.updatedAt),
+                  },
+                ]}
+              />
+
+              <form
+                action={updateTradeRecord.bind(null, tradeRecord.id)}
+                className="grid gap-4 rounded border border-zinc-200 p-4"
+              >
+                <h3 className="text-base font-semibold text-zinc-950">
+                  编辑交易记录
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    入场时间
+                    <input
+                      name="entryTime"
+                      type="datetime-local"
+                      defaultValue={formatDateTimeLocal(
+                        tradeRecord.entryTime,
+                      )}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    出场时间
+                    <input
+                      name="exitTime"
+                      type="datetime-local"
+                      defaultValue={formatDateTimeLocal(tradeRecord.exitTime)}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                    />
+                  </label>
+                </div>
+                <div className="grid gap-4 md:grid-cols-4">
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    入场价
+                    <input
+                      name="entryPrice"
+                      inputMode="decimal"
+                      defaultValue={tradeRecord.entryPrice.toString()}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    出场价
+                    <input
+                      name="exitPrice"
+                      inputMode="decimal"
+                      defaultValue={tradeRecord.exitPrice?.toString() ?? ""}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    投入金额
+                    <input
+                      name="amount"
+                      inputMode="decimal"
+                      defaultValue={tradeRecord.amount.toString()}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    杠杆倍数
+                    <input
+                      name="leverage"
+                      inputMode="decimal"
+                      defaultValue={tradeRecord.leverage.toString()}
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    盈亏金额
+                    <input
+                      name="profitLossAmount"
+                      inputMode="decimal"
+                      defaultValue={
+                        tradeRecord.profitLossAmount?.toString() ?? ""
+                      }
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                    盈亏比例
+                    <input
+                      name="profitLossPercent"
+                      inputMode="decimal"
+                      defaultValue={
+                        tradeRecord.profitLossPercent?.toString() ?? ""
+                      }
+                      className="h-10 rounded border border-zinc-300 px-3 text-zinc-950 outline-none focus:border-zinc-900"
+                      required
+                    />
+                  </label>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                  <input
+                    name="followedPlan"
+                    type="checkbox"
+                    defaultChecked={tradeRecord.followedPlan}
+                  />
+                  是否遵守计划
+                </label>
+                <label className="grid gap-2 text-sm font-medium text-zinc-700">
+                  出场原因
+                  <textarea
+                    name="exitReason"
+                    rows={3}
+                    defaultValue={tradeRecord.exitReason ?? ""}
+                    className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
+                    required
+                  />
+                </label>
+                <div>
+                  <ActionButton>保存交易记录</ActionButton>
+                </div>
+              </form>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-zinc-600">尚未生成交易记录</p>

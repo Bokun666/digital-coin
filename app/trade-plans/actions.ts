@@ -99,6 +99,32 @@ function parseDecimal(value: string, fieldName: string): Prisma.Decimal {
   }
 }
 
+function parseRequiredDate(value: string, errorMessage: string): Date {
+  if (!value) {
+    throw new Error(errorMessage);
+  }
+
+  return parseDate(value, errorMessage);
+}
+
+function parseOptionalDate(value: string, errorMessage: string): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  return parseDate(value, errorMessage);
+}
+
+function parseDate(value: string, errorMessage: string): Date {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(errorMessage);
+  }
+
+  return date;
+}
+
 function assertGreaterThanZero(value: Prisma.Decimal, fieldName: string) {
   if (value.lte(0)) {
     throw new Error(`${fieldName} 必须大于 0。`);
@@ -534,6 +560,109 @@ export async function generateTradeRecord(tradePlanId: string) {
 
   revalidateTradePlanPages(tradePlanId);
   redirect(`/trade-plans/${tradePlanId}`);
+}
+
+export async function updateTradeRecord(
+  tradeRecordId: string,
+  formData: FormData,
+) {
+  if (!tradeRecordId.trim()) {
+    redirectWithError("缺少交易记录 ID。");
+  }
+
+  let tradePlanId: string | null = null;
+
+  try {
+    const tradeRecord = await prisma.tradeRecord.findUnique({
+      where: { id: tradeRecordId },
+      include: {
+        tradePlan: true,
+      },
+    });
+
+    if (!tradeRecord) {
+      throw new Error("交易记录不存在，无法更新。");
+    }
+
+    tradePlanId = tradeRecord.tradePlanId;
+
+    const entryTime = parseRequiredDate(
+      getText(formData, "entryTime"),
+      "入场时间格式不正确。",
+    );
+    const exitTime = parseOptionalDate(
+      getText(formData, "exitTime"),
+      "出场时间格式不正确。",
+    );
+    const entryPrice = parseRequiredDecimal(
+      getText(formData, "entryPrice"),
+      "入场价",
+    );
+    const exitPrice = parseOptionalDecimal(
+      getText(formData, "exitPrice"),
+      "出场价",
+    );
+    const amount = parseRequiredDecimal(getText(formData, "amount"), "投入金额");
+    const leverage = parseRequiredDecimal(
+      getText(formData, "leverage"),
+      "杠杆倍数",
+    );
+    const profitLossAmount = parseRequiredDecimal(
+      getText(formData, "profitLossAmount"),
+      "盈亏金额",
+    );
+    const profitLossPercent = parseRequiredDecimal(
+      getText(formData, "profitLossPercent"),
+      "盈亏比例",
+    );
+    const exitReason = getText(formData, "exitReason");
+
+    assertGreaterThanZero(entryPrice, "入场价");
+
+    if (exitPrice) {
+      assertGreaterThanZero(exitPrice, "出场价");
+    }
+
+    assertGreaterThanZero(amount, "投入金额");
+    assertGreaterThanOrEqualOne(leverage, "杠杆倍数");
+
+    if (!exitReason) {
+      throw new Error("出场原因不能为空。");
+    }
+
+    await prisma.tradeRecord.update({
+      where: { id: tradeRecord.id },
+      data: {
+        entryTime,
+        exitTime,
+        entryPrice,
+        exitPrice,
+        amount,
+        leverage,
+        profitLossAmount,
+        profitLossPercent,
+        followedPlan: getCheckbox(formData, "followedPlan"),
+        exitReason,
+      },
+    });
+  } catch (error) {
+    const message = getDatabaseErrorMessage(error);
+
+    if (tradePlanId) {
+      redirectWithTradePlanError(tradePlanId, message);
+    }
+
+    redirectWithError(message);
+  }
+
+  revalidatePath("/trade-plans");
+
+  if (tradePlanId) {
+    revalidatePath(`/trade-plans/${tradePlanId}`);
+    redirect(`/trade-plans/${tradePlanId}`);
+  }
+
+  redirect("/trade-plans");
 }
 
 export async function generateReview(tradeRecordId: string) {
