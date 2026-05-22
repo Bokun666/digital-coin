@@ -257,7 +257,7 @@ function getDatabaseErrorMessage(error: unknown): string {
   return "操作失败，请稍后重试。";
 }
 
-function createRiskCheckInputSnapshot(
+function createTradePlanInputSnapshot(
   tradePlan: NonNullable<
     Awaited<ReturnType<typeof prisma.tradePlan.findUnique>>
   >,
@@ -342,7 +342,7 @@ export async function generateRiskCheck(tradePlanId: string) {
       isChasingPrice: tradePlan.isChasingPrice,
       emotionState: tradePlan.emotionState,
     });
-    const inputSnapshot = createRiskCheckInputSnapshot(tradePlan);
+    const inputSnapshot = createTradePlanInputSnapshot(tradePlan);
 
     await prisma.$transaction([
       prisma.riskCheck.create({
@@ -395,7 +395,7 @@ export async function generatePositionSizing(tradePlanId: string) {
       direction: tradePlan.direction,
       operationType: tradePlan.operationType,
     });
-    const inputSnapshot = createRiskCheckInputSnapshot(tradePlan);
+    const inputSnapshot = createTradePlanInputSnapshot(tradePlan);
 
     await prisma.positionSizing.create({
       data: {
