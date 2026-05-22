@@ -64,6 +64,45 @@ function parseAssetAmount(formData: FormData, key: string, fieldName: string) {
   return value;
 }
 
+function normalizeAssetSnapshotForm(formData: FormData) {
+  const snapshotDate = parseRequiredDate(
+    getText(formData, "snapshotDate"),
+    "快照时间",
+  );
+  const notes = getText(formData, "notes");
+
+  if (notes.length > NOTES_MAX_LENGTH) {
+    throw new Error("备注不能超过 1000 字。");
+  }
+
+  return {
+    snapshotDate,
+    totalAssetCny: parseAssetAmount(
+      formData,
+      "totalAssetCny",
+      "总资产 CNY",
+    ),
+    totalAssetUsdt: parseAssetAmount(
+      formData,
+      "totalAssetUsdt",
+      "总资产 USDT",
+    ),
+    stablecoinAmount: parseAssetAmount(
+      formData,
+      "stablecoinAmount",
+      "稳定币金额",
+    ),
+    spotAmount: parseAssetAmount(formData, "spotAmount", "现货金额"),
+    futuresMargin: parseAssetAmount(
+      formData,
+      "futuresMargin",
+      "合约保证金",
+    ),
+    earnAmount: parseAssetAmount(formData, "earnAmount", "理财金额"),
+    notes: notes || null,
+  };
+}
+
 function getDatabaseErrorMessage(error: unknown): string {
   if (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -81,43 +120,35 @@ function getDatabaseErrorMessage(error: unknown): string {
 
 export async function createAssetSnapshot(formData: FormData) {
   try {
-    const snapshotDate = parseRequiredDate(
-      getText(formData, "snapshotDate"),
-      "快照时间",
-    );
-    const notes = getText(formData, "notes");
+    await prisma.assetSnapshot.create({
+      data: normalizeAssetSnapshotForm(formData),
+    });
+  } catch (error) {
+    redirectWithError(getDatabaseErrorMessage(error));
+  }
 
-    if (notes.length > NOTES_MAX_LENGTH) {
-      throw new Error("备注不能超过 1000 字。");
+  revalidatePath("/assets");
+  revalidatePath("/");
+  redirect("/assets");
+}
+
+export async function updateAssetSnapshot(id: string, formData: FormData) {
+  if (!id.trim()) {
+    redirectWithError("缺少资产快照 ID。");
+  }
+
+  try {
+    const snapshot = await prisma.assetSnapshot.findUnique({
+      where: { id },
+    });
+
+    if (!snapshot) {
+      throw new Error("资产快照不存在或已被删除。");
     }
 
-    await prisma.assetSnapshot.create({
-      data: {
-        snapshotDate,
-        totalAssetCny: parseAssetAmount(
-          formData,
-          "totalAssetCny",
-          "总资产 CNY",
-        ),
-        totalAssetUsdt: parseAssetAmount(
-          formData,
-          "totalAssetUsdt",
-          "总资产 USDT",
-        ),
-        stablecoinAmount: parseAssetAmount(
-          formData,
-          "stablecoinAmount",
-          "稳定币金额",
-        ),
-        spotAmount: parseAssetAmount(formData, "spotAmount", "现货金额"),
-        futuresMargin: parseAssetAmount(
-          formData,
-          "futuresMargin",
-          "合约保证金",
-        ),
-        earnAmount: parseAssetAmount(formData, "earnAmount", "理财金额"),
-        notes: notes || null,
-      },
+    await prisma.assetSnapshot.update({
+      where: { id: snapshot.id },
+      data: normalizeAssetSnapshotForm(formData),
     });
   } catch (error) {
     redirectWithError(getDatabaseErrorMessage(error));

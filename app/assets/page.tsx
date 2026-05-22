@@ -2,7 +2,11 @@ import Link from "next/link";
 
 import { prisma } from "@/src/lib/prisma";
 
-import { createAssetSnapshot, deleteAssetSnapshot } from "./actions";
+import {
+  createAssetSnapshot,
+  deleteAssetSnapshot,
+  updateAssetSnapshot,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +20,16 @@ function formatDate(value: Date): string {
   return value.toLocaleString("zh-CN", {
     hour12: false,
   });
+}
+
+function formatDateTimeLocal(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function formatOptionalValue(value: unknown): string {
@@ -235,16 +249,126 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
                         {formatDate(snapshot.createdAt)}
                       </td>
                       <td className="px-4 py-4">
-                        <form
-                          action={deleteAssetSnapshot.bind(null, snapshot.id)}
-                        >
-                          <button
-                            type="submit"
-                            className="h-9 rounded border border-red-200 px-3 text-sm font-medium text-red-700 hover:bg-red-50"
+                        <div className="flex flex-col gap-2">
+                          <form
+                            action={updateAssetSnapshot.bind(
+                              null,
+                              snapshot.id,
+                            )}
+                            className="grid min-w-[680px] gap-3 rounded border border-zinc-200 p-3"
                           >
-                            删除
-                          </button>
-                        </form>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                快照时间
+                                <input
+                                  name="snapshotDate"
+                                  type="datetime-local"
+                                  defaultValue={formatDateTimeLocal(
+                                    snapshot.snapshotDate,
+                                  )}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                总资产 CNY
+                                <input
+                                  name="totalAssetCny"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.totalAssetCny.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                总资产 USDT
+                                <input
+                                  name="totalAssetUsdt"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.totalAssetUsdt.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-4">
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                稳定币金额
+                                <input
+                                  name="stablecoinAmount"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.stablecoinAmount.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                现货金额
+                                <input
+                                  name="spotAmount"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.spotAmount.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                合约保证金
+                                <input
+                                  name="futuresMargin"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.futuresMargin.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                                理财金额
+                                <input
+                                  name="earnAmount"
+                                  inputMode="decimal"
+                                  defaultValue={snapshot.earnAmount.toString()}
+                                  className="h-9 rounded border border-zinc-300 px-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                                  required
+                                />
+                              </label>
+                            </div>
+                            <label className="grid gap-1 text-xs font-medium text-zinc-600">
+                              备注
+                              <textarea
+                                name="notes"
+                                rows={2}
+                                maxLength={1000}
+                                defaultValue={snapshot.notes ?? ""}
+                                className="rounded border border-zinc-300 px-2 py-2 text-sm text-zinc-950 outline-none focus:border-zinc-900"
+                              />
+                              <span className="font-normal text-zinc-500">
+                                备注最多 1000 字。
+                              </span>
+                            </label>
+                            <div>
+                              <button
+                                type="submit"
+                                className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                              >
+                                保存修改
+                              </button>
+                            </div>
+                          </form>
+                          <form
+                            action={deleteAssetSnapshot.bind(
+                              null,
+                              snapshot.id,
+                            )}
+                          >
+                            <button
+                              type="submit"
+                              className="h-9 rounded border border-red-200 px-3 text-sm font-medium text-red-700 hover:bg-red-50"
+                            >
+                              删除
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
                   ))
