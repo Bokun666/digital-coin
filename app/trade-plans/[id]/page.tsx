@@ -192,9 +192,11 @@ export default async function TradePlanDetailPage({
     include: {
       riskChecks: {
         orderBy: { createdAt: "desc" },
+        take: 1,
       },
       positionSizings: {
         orderBy: { createdAt: "desc" },
+        take: 1,
       },
       tradeRecord: {
         include: {

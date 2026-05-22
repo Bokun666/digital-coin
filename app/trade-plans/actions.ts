@@ -115,6 +115,13 @@ function redirectWithError(message: string): never {
   redirect(`/trade-plans?error=${encodeURIComponent(message)}`);
 }
 
+function redirectWithTradePlanError(
+  tradePlanId: string,
+  message: string,
+): never {
+  redirect(`/trade-plans/${tradePlanId}?error=${encodeURIComponent(message)}`);
+}
+
 function revalidateTradePlanPages(tradePlanId: string) {
   revalidatePath("/trade-plans");
   revalidatePath(`/trade-plans/${tradePlanId}`);
@@ -384,7 +391,7 @@ export async function generateRiskCheck(tradePlanId: string) {
       }),
     ]);
   } catch (error) {
-    redirectWithError(getDatabaseErrorMessage(error));
+    redirectWithTradePlanError(tradePlanId, getDatabaseErrorMessage(error));
   }
 
   revalidateTradePlanPages(tradePlanId);
@@ -436,7 +443,7 @@ export async function generatePositionSizing(tradePlanId: string) {
       },
     });
   } catch (error) {
-    redirectWithError(getDatabaseErrorMessage(error));
+    redirectWithTradePlanError(tradePlanId, getDatabaseErrorMessage(error));
   }
 
   revalidateTradePlanPages(tradePlanId);
@@ -522,7 +529,7 @@ export async function generateTradeRecord(tradePlanId: string) {
       }),
     ]);
   } catch (error) {
-    redirectWithError(getDatabaseErrorMessage(error));
+    redirectWithTradePlanError(tradePlanId, getDatabaseErrorMessage(error));
   }
 
   revalidateTradePlanPages(tradePlanId);
@@ -571,7 +578,13 @@ export async function generateReview(tradeRecordId: string) {
       },
     });
   } catch (error) {
-    redirectWithError(getDatabaseErrorMessage(error));
+    const message = getDatabaseErrorMessage(error);
+
+    if (tradePlanId) {
+      redirectWithTradePlanError(tradePlanId, message);
+    }
+
+    redirectWithError(message);
   }
 
   revalidatePath("/trade-plans");
