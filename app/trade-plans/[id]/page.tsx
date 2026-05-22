@@ -589,6 +589,9 @@ export default async function TradePlanDetailPage({
                 <h3 className="text-base font-semibold text-zinc-950">
                   编辑交易记录
                 </h3>
+                <p className="text-sm text-zinc-500">
+                  盈亏金额和盈亏比例需要手动填写，系统暂不自动计算手续费、滑点、资金费率和分批成交影响。
+                </p>
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="grid gap-2 text-sm font-medium text-zinc-700">
                     入场时间

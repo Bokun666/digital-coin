@@ -99,12 +99,16 @@ function parseDecimal(value: string, fieldName: string): Prisma.Decimal {
   }
 }
 
-function parseRequiredDate(value: string, errorMessage: string): Date {
+function parseRequiredDate(
+  value: string,
+  emptyErrorMessage: string,
+  invalidErrorMessage: string,
+): Date {
   if (!value) {
-    throw new Error(errorMessage);
+    throw new Error(emptyErrorMessage);
   }
 
-  return parseDate(value, errorMessage);
+  return parseDate(value, invalidErrorMessage);
 }
 
 function parseOptionalDate(value: string, errorMessage: string): Date | null {
@@ -588,6 +592,7 @@ export async function updateTradeRecord(
 
     const entryTime = parseRequiredDate(
       getText(formData, "entryTime"),
+      "入场时间不能为空。",
       "入场时间格式不正确。",
     );
     const exitTime = parseOptionalDate(
@@ -616,6 +621,10 @@ export async function updateTradeRecord(
       "盈亏比例",
     );
     const exitReason = getText(formData, "exitReason");
+
+    if (exitTime && exitTime < entryTime) {
+      throw new Error("出场时间不能早于入场时间。");
+    }
 
     assertGreaterThanZero(entryPrice, "入场价");
 
