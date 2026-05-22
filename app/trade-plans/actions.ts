@@ -42,6 +42,7 @@ const RISK_LEVEL_TO_TRADE_PLAN_STATUS = {
   HIGH: "HIGH_RISK",
   EXTREME: "EXTREME_RISK",
 } as const;
+const REVIEW_TEXT_MAX_LENGTH = 2000;
 
 function getText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -780,6 +781,26 @@ export async function updateReview(reviewId: string, formData: FormData) {
 
     if (!nextAction) {
       throw new Error("下次改进不能为空。");
+    }
+
+    if (followedPlanReview.length > REVIEW_TEXT_MAX_LENGTH) {
+      throw new Error("是否遵守计划复盘不能超过 2000 字。");
+    }
+
+    if (emotionReview.length > REVIEW_TEXT_MAX_LENGTH) {
+      throw new Error("情绪状态复盘不能超过 2000 字。");
+    }
+
+    if (mistake.length > REVIEW_TEXT_MAX_LENGTH) {
+      throw new Error("错误总结不能超过 2000 字。");
+    }
+
+    if (lesson.length > REVIEW_TEXT_MAX_LENGTH) {
+      throw new Error("经验教训不能超过 2000 字。");
+    }
+
+    if (nextAction.length > REVIEW_TEXT_MAX_LENGTH) {
+      throw new Error("下次改进不能超过 2000 字。");
     }
 
     await prisma.review.update({
