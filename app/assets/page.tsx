@@ -158,6 +158,9 @@ export default async function AssetsPage({ searchParams }: AssetsPageProps) {
                 placeholder="可选，例如资金来源、仓位变化、风险备注"
                 className="rounded border border-zinc-300 px-3 py-2 text-zinc-950 outline-none focus:border-zinc-900"
               />
+              <span className="text-xs font-normal text-zinc-500">
+                备注最多 1000 字。
+              </span>
             </label>
 
             <div>

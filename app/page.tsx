@@ -67,6 +67,7 @@ export default async function Home() {
     positionSizingCount,
     tradeRecordCount,
     reviewCount,
+    assetSnapshotCount,
     recentTradePlans,
     recentTradeRecords,
     recentReviews,
@@ -90,6 +91,7 @@ export default async function Home() {
     prisma.positionSizing.count(),
     prisma.tradeRecord.count(),
     prisma.review.count(),
+    prisma.assetSnapshot.count(),
     prisma.tradePlan.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -119,6 +121,7 @@ export default async function Home() {
     { label: "仓位计算数量", value: positionSizingCount },
     { label: "交易记录数量", value: tradeRecordCount },
     { label: "复盘数量", value: reviewCount },
+    { label: "资产快照数量", value: assetSnapshotCount },
   ];
 
   return (
