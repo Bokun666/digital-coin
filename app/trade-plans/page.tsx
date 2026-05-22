@@ -7,6 +7,7 @@ import {
   deleteTradePlan,
   generatePositionSizing,
   generateRiskCheck,
+  generateReview,
   generateTradeRecord,
 } from "./actions";
 
@@ -165,7 +166,11 @@ export default async function TradePlansPage({
         orderBy: { createdAt: "desc" },
         take: 1,
       },
-      tradeRecord: true,
+      tradeRecord: {
+        include: {
+          review: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -398,7 +403,7 @@ export default async function TradePlansPage({
 
         <section className="overflow-hidden rounded border border-zinc-200 bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[3400px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[3600px] border-collapse text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">币种</th>
@@ -437,6 +442,9 @@ export default async function TradePlansPage({
                   <th className="px-4 py-3 font-medium">盈亏比例</th>
                   <th className="px-4 py-3 font-medium">是否遵守计划</th>
                   <th className="px-4 py-3 font-medium">出场原因</th>
+                  <th className="px-4 py-3 font-medium">
+                    复盘状态 / 复盘摘要
+                  </th>
                   <th className="px-4 py-3 font-medium">计划状态</th>
                   <th className="px-4 py-3 font-medium">创建时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
@@ -447,7 +455,7 @@ export default async function TradePlansPage({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-zinc-500"
-                      colSpan={37}
+                      colSpan={38}
                     >
                       暂无交易计划
                     </td>
@@ -457,6 +465,7 @@ export default async function TradePlansPage({
                     const latestRiskCheck = plan.riskChecks[0];
                     const latestPositionSizing = plan.positionSizings[0];
                     const tradeRecord = plan.tradeRecord;
+                    const review = tradeRecord?.review;
                     const isPositionTooHeavy = isGreaterThanTwo(
                       latestPositionSizing?.lossPercentOfTotalCapital,
                     );
@@ -699,6 +708,57 @@ export default async function TradePlansPage({
                             ? formatOptionalValue(tradeRecord.exitReason)
                             : "未生成交易记录"}
                         </td>
+                        <td className="max-w-lg px-4 py-4 text-zinc-700">
+                          {!tradeRecord ? (
+                            <span className="inline-flex rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600">
+                              无法复盘
+                            </span>
+                          ) : review ? (
+                            <div className="grid gap-2">
+                              <span className="inline-flex w-fit rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                                已复盘
+                              </span>
+                              <div className="grid gap-1 text-xs leading-5 text-zinc-600">
+                                <div>
+                                  <span className="font-medium text-zinc-800">
+                                    遵守计划：
+                                  </span>
+                                  {formatOptionalValue(
+                                    review.followedPlanReview,
+                                  )}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-zinc-800">
+                                    情绪状态：
+                                  </span>
+                                  {formatOptionalValue(review.emotionReview)}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-zinc-800">
+                                    错误总结：
+                                  </span>
+                                  {formatOptionalValue(review.mistake)}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-zinc-800">
+                                    经验教训：
+                                  </span>
+                                  {formatOptionalValue(review.lesson)}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-zinc-800">
+                                    下次改进：
+                                  </span>
+                                  {formatOptionalValue(review.nextAction)}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="inline-flex rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                              未复盘
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-4">
                           {getOptionLabel(statusOptions, plan.status)}
                         </td>
@@ -750,6 +810,37 @@ export default async function TradePlansPage({
                                   className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
                                 >
                                   生成交易记录
+                                </button>
+                              </form>
+                            )}
+                            {!tradeRecord ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
+                              >
+                                请先生成交易记录
+                              </button>
+                            ) : review ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
+                              >
+                                已生成复盘
+                              </button>
+                            ) : (
+                              <form
+                                action={generateReview.bind(
+                                  null,
+                                  tradeRecord.id,
+                                )}
+                              >
+                                <button
+                                  type="submit"
+                                  className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                                >
+                                  生成复盘
                                 </button>
                               </form>
                             )}

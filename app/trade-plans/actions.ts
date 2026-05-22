@@ -247,6 +247,15 @@ function getDatabaseErrorMessage(error: unknown): string {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   ) {
+    const target = error.meta?.target;
+    const targetText = Array.isArray(target)
+      ? target.join(",")
+      : String(target ?? "");
+
+    if (targetText.includes("tradeRecordId")) {
+      return "操作失败：该复盘记录可能已经存在，请刷新页面后重试。";
+    }
+
     return "操作失败：该记录可能已经存在，请刷新页面后重试。";
   }
 
@@ -254,7 +263,7 @@ function getDatabaseErrorMessage(error: unknown): string {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2003"
   ) {
-    return "删除交易计划失败：存在关联数据或外键约束，请先处理关联记录。";
+    return "操作失败：关联记录不存在或已被删除。";
   }
 
   if (error instanceof Error) {
@@ -507,6 +516,51 @@ export async function generateTradeRecord(tradePlanId: string) {
         },
       }),
     ]);
+  } catch (error) {
+    redirectWithError(getDatabaseErrorMessage(error));
+  }
+
+  revalidatePath("/trade-plans");
+  redirect("/trade-plans");
+}
+
+export async function generateReview(tradeRecordId: string) {
+  if (!tradeRecordId.trim()) {
+    redirectWithError("缺少交易记录 ID。");
+  }
+
+  try {
+    const tradeRecord = await prisma.tradeRecord.findUnique({
+      where: { id: tradeRecordId },
+      include: {
+        review: true,
+        tradePlan: true,
+      },
+    });
+
+    if (!tradeRecord) {
+      throw new Error("交易记录不存在，无法生成复盘。");
+    }
+
+    if (tradeRecord.review) {
+      throw new Error("该交易记录已经生成复盘，请不要重复生成。");
+    }
+
+    await prisma.review.create({
+      data: {
+        tradeRecordId: tradeRecord.id,
+        followedPlanReview: tradeRecord.followedPlan
+          ? "本次交易记录初始标记为遵守计划，后续需要补充具体执行过程。"
+          : "本次交易记录标记为未遵守计划，需要复盘偏离计划的原因。",
+        emotionReview:
+          "待补充本次交易中的情绪状态，例如是否 FOMO、焦虑、恐惧、冲动或想回本。",
+        mistake:
+          "待补充本次交易中的错误，例如是否追涨、无止损、仓位过重、提前离场或扛单。",
+        lesson: "待补充本次交易带来的经验教训。",
+        nextAction:
+          "待补充下次改进动作，例如降低仓位、严格止损、等待更明确信号或避免重大宏观事件前重仓。",
+      },
+    });
   } catch (error) {
     redirectWithError(getDatabaseErrorMessage(error));
   }
