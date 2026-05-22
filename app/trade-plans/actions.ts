@@ -421,3 +421,82 @@ export async function generatePositionSizing(tradePlanId: string) {
   revalidatePath("/trade-plans");
   redirect("/trade-plans");
 }
+
+export async function generateTradeRecord(tradePlanId: string) {
+  if (!tradePlanId.trim()) {
+    redirectWithError("缺少交易计划 ID。");
+  }
+
+  try {
+    const tradePlan = await prisma.tradePlan.findUnique({
+      where: { id: tradePlanId },
+      include: {
+        tradeRecord: true,
+        riskChecks: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        positionSizings: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!tradePlan) {
+      throw new Error("交易计划不存在，无法生成交易记录。");
+    }
+
+    if (tradePlan.tradeRecord) {
+      throw new Error("该交易计划已经生成交易记录，请不要重复生成。");
+    }
+
+    const latestRiskCheck = tradePlan.riskChecks[0];
+
+    if (!latestRiskCheck) {
+      throw new Error("请先生成风险检查，再生成交易记录。");
+    }
+
+    if (tradePlan.positionSizings.length === 0) {
+      throw new Error("请先生成仓位计算，再生成交易记录。");
+    }
+
+    if (latestRiskCheck.level === "EXTREME") {
+      throw new Error("该计划为极高风险，不建议生成交易记录。");
+    }
+
+    const zero = new Prisma.Decimal(0);
+
+    await prisma.$transaction([
+      prisma.tradeRecord.create({
+        data: {
+          tradePlanId: tradePlan.id,
+          coinSymbol: tradePlan.coinSymbol,
+          operationType: tradePlan.operationType,
+          direction: tradePlan.direction,
+          entryTime: new Date(),
+          exitTime: null,
+          entryPrice: tradePlan.entryPrice,
+          exitPrice: null,
+          amount: tradePlan.plannedAmount,
+          leverage: tradePlan.leverage,
+          profitLossAmount: zero,
+          profitLossPercent: zero,
+          followedPlan: true,
+          exitReason: "根据交易计划生成，待后续补充出场信息",
+        },
+      }),
+      prisma.tradePlan.update({
+        where: { id: tradePlan.id },
+        data: {
+          status: "EXECUTED",
+        },
+      }),
+    ]);
+  } catch (error) {
+    redirectWithError(getDatabaseErrorMessage(error));
+  }
+
+  revalidatePath("/trade-plans");
+  redirect("/trade-plans");
+}

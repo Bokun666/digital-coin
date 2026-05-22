@@ -7,6 +7,7 @@ import {
   deleteTradePlan,
   generatePositionSizing,
   generateRiskCheck,
+  generateTradeRecord,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -94,6 +95,10 @@ function formatDate(value: Date): string {
   });
 }
 
+function formatOptionalDate(value: Date | null | undefined): string {
+  return value ? formatDate(value) : "-";
+}
+
 function formatReasons(value: unknown): string {
   if (value === null || value === undefined || value === "") {
     return "-";
@@ -160,6 +165,7 @@ export default async function TradePlansPage({
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      tradeRecord: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -392,7 +398,7 @@ export default async function TradePlansPage({
 
         <section className="overflow-hidden rounded border border-zinc-200 bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[2500px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[3400px] border-collapse text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">币种</th>
@@ -420,6 +426,17 @@ export default async function TradePlansPage({
                     止损亏损占总资金比例
                   </th>
                   <th className="px-4 py-3 font-medium">仓位建议</th>
+                  <th className="px-4 py-3 font-medium">交易记录状态</th>
+                  <th className="px-4 py-3 font-medium">记录入场时间</th>
+                  <th className="px-4 py-3 font-medium">记录出场时间</th>
+                  <th className="px-4 py-3 font-medium">记录入场价</th>
+                  <th className="px-4 py-3 font-medium">记录出场价</th>
+                  <th className="px-4 py-3 font-medium">记录投入金额</th>
+                  <th className="px-4 py-3 font-medium">记录杠杆倍数</th>
+                  <th className="px-4 py-3 font-medium">盈亏金额</th>
+                  <th className="px-4 py-3 font-medium">盈亏比例</th>
+                  <th className="px-4 py-3 font-medium">是否遵守计划</th>
+                  <th className="px-4 py-3 font-medium">出场原因</th>
                   <th className="px-4 py-3 font-medium">计划状态</th>
                   <th className="px-4 py-3 font-medium">创建时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
@@ -430,7 +447,7 @@ export default async function TradePlansPage({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-zinc-500"
-                      colSpan={26}
+                      colSpan={37}
                     >
                       暂无交易计划
                     </td>
@@ -439,6 +456,7 @@ export default async function TradePlansPage({
                   tradePlans.map((plan) => {
                     const latestRiskCheck = plan.riskChecks[0];
                     const latestPositionSizing = plan.positionSizings[0];
+                    const tradeRecord = plan.tradeRecord;
                     const isPositionTooHeavy = isGreaterThanTwo(
                       latestPositionSizing?.lossPercentOfTotalCapital,
                     );
@@ -617,6 +635,71 @@ export default async function TradePlansPage({
                           )}
                         </td>
                         <td className="px-4 py-4">
+                          {tradeRecord ? (
+                            <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                              已生成
+                            </span>
+                          ) : (
+                            <span className="inline-flex rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600">
+                              未生成
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
+                          {tradeRecord
+                            ? formatDate(tradeRecord.entryTime)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
+                          {tradeRecord
+                            ? formatOptionalDate(tradeRecord.exitTime)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(tradeRecord.entryPrice)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(tradeRecord.exitPrice)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(tradeRecord.amount)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(tradeRecord.leverage)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(
+                                tradeRecord.profitLossAmount,
+                              )
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatOptionalValue(
+                                tradeRecord.profitLossPercent,
+                              )
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {tradeRecord
+                            ? formatBoolean(tradeRecord.followedPlan)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="max-w-md px-4 py-4 text-zinc-700">
+                          {tradeRecord
+                            ? formatOptionalValue(tradeRecord.exitReason)
+                            : "未生成交易记录"}
+                        </td>
+                        <td className="px-4 py-4">
                           {getOptionLabel(statusOptions, plan.status)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
@@ -647,6 +730,29 @@ export default async function TradePlansPage({
                                 生成仓位计算
                               </button>
                             </form>
+                            {tradeRecord ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
+                              >
+                                已生成交易记录
+                              </button>
+                            ) : (
+                              <form
+                                action={generateTradeRecord.bind(
+                                  null,
+                                  plan.id,
+                                )}
+                              >
+                                <button
+                                  type="submit"
+                                  className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                                >
+                                  生成交易记录
+                                </button>
+                              </form>
+                            )}
                             <form action={deleteTradePlan.bind(null, plan.id)}>
                               <button
                                 type="submit"
