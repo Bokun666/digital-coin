@@ -77,6 +77,17 @@ enum RiskLevel {
   EXTREME
 }
 
+enum MarketRegime {
+  BULL
+  BEAR
+  RANGE
+  CRASH
+  RECOVERY
+  HIGH_VOLATILITY
+  LOW_VOLATILITY
+  UNKNOWN
+}
+
 model WatchCoin {
   id              String          @id @default(cuid())
   symbol          String          @db.VarChar(32)
@@ -221,4 +232,25 @@ model AssetSnapshot {
   createdAt        DateTime  @default(now())
 
   @@index([snapshotDate])
+}
+
+model MarketSnapshot {
+  id              String       @id @default(cuid())
+  symbol          String       @db.VarChar(32)
+  snapshotTime    DateTime
+  marketRegime    MarketRegime @default(UNKNOWN)
+  currentPrice    Decimal?     @db.Decimal(36, 18)
+  klineSummary    String?      @db.Text
+  macroSummary    String?      @db.Text
+  contractSummary String?      @db.Text
+  onChainSummary  String?      @db.Text
+  newsSummary     String?      @db.Text
+  dataSources     String?      @db.Text
+  screenshotPath  String?      @db.Text
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now())
+
+  @@index([symbol])
+  @@index([snapshotTime])
+  @@index([marketRegime])
 }

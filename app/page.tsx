@@ -32,6 +32,17 @@ const statusOptions = [
   { value: "CANCELLED", label: "已取消" },
 ];
 
+const marketRegimeOptions = [
+  { value: "UNKNOWN", label: "未知" },
+  { value: "BULL", label: "牛市" },
+  { value: "BEAR", label: "熊市" },
+  { value: "RANGE", label: "震荡" },
+  { value: "CRASH", label: "暴跌" },
+  { value: "RECOVERY", label: "修复" },
+  { value: "HIGH_VOLATILITY", label: "高波动" },
+  { value: "LOW_VOLATILITY", label: "低波动" },
+];
+
 function getOptionLabel(
   options: Array<{ value: string; label: string }>,
   value: string,
@@ -68,10 +79,12 @@ export default async function Home() {
     tradeRecordCount,
     reviewCount,
     assetSnapshotCount,
+    marketSnapshotCount,
     recentTradePlans,
     recentTradeRecords,
     recentReviews,
     latestAssetSnapshot,
+    recentMarketSnapshots,
   ] = await Promise.all([
     prisma.watchCoin.count(),
     prisma.tradePlan.count(),
@@ -92,6 +105,7 @@ export default async function Home() {
     prisma.tradeRecord.count(),
     prisma.review.count(),
     prisma.assetSnapshot.count(),
+    prisma.marketSnapshot.count(),
     prisma.tradePlan.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -110,6 +124,10 @@ export default async function Home() {
     prisma.assetSnapshot.findFirst({
       orderBy: { snapshotDate: "desc" },
     }),
+    prisma.marketSnapshot.findMany({
+      orderBy: { snapshotTime: "desc" },
+      take: 5,
+    }),
   ]);
 
   const stats = [
@@ -122,6 +140,7 @@ export default async function Home() {
     { label: "交易记录数量", value: tradeRecordCount },
     { label: "复盘数量", value: reviewCount },
     { label: "资产快照数量", value: assetSnapshotCount },
+    { label: "市场快照数量", value: marketSnapshotCount },
   ];
 
   return (
@@ -158,7 +177,7 @@ export default async function Home() {
 
         <section>
           <h2 className="text-lg font-semibold">模块入口</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Link
               href="/watchlist"
               className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
@@ -193,6 +212,20 @@ export default async function Home() {
               <div className="mt-3 text-xl font-semibold">资产快照</div>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
                 手动记录总资产、稳定币、现货、合约保证金和理财金额。
+              </p>
+            </Link>
+
+            <Link
+              href="/market-snapshots"
+              className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
+            >
+              <div className="text-sm font-medium text-zinc-500">
+                /market-snapshots
+              </div>
+              <div className="mt-3 text-xl font-semibold">市场快照</div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                手动记录 K线、宏观、合约、链上和新闻摘要，为后续 AI
+                分析提供上下文。
               </p>
             </Link>
           </div>
@@ -269,6 +302,62 @@ export default async function Home() {
             </div>
           ) : (
             <p className="mt-4 text-sm text-zinc-500">暂无资产快照</p>
+          )}
+        </section>
+
+        <section className="rounded border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">最近市场快照</h2>
+            <Link
+              href="/market-snapshots"
+              className="text-sm font-medium text-zinc-500 hover:text-zinc-900"
+            >
+              管理市场快照
+            </Link>
+          </div>
+          {recentMarketSnapshots.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">暂无市场快照</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
+                  <tr>
+                    <th className="py-3 pr-4 font-medium">币种</th>
+                    <th className="px-4 py-3 font-medium">快照时间</th>
+                    <th className="px-4 py-3 font-medium">市场环境</th>
+                    <th className="px-4 py-3 font-medium">当前价格</th>
+                    <th className="py-3 pl-4 font-medium">数据来源</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentMarketSnapshots.map((snapshot) => (
+                    <tr
+                      key={snapshot.id}
+                      className="border-b border-zinc-100 last:border-0"
+                    >
+                      <td className="py-3 pr-4 font-semibold">
+                        {snapshot.symbol}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
+                        {formatDate(snapshot.snapshotTime)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getOptionLabel(
+                          marketRegimeOptions,
+                          snapshot.marketRegime,
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatDecimal(snapshot.currentPrice)}
+                      </td>
+                      <td className="py-3 pl-4 text-zinc-700">
+                        {formatOptionalValue(snapshot.dataSources)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
