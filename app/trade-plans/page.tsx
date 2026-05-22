@@ -2,14 +2,7 @@ import Link from "next/link";
 
 import { prisma } from "@/src/lib/prisma";
 
-import {
-  createTradePlan,
-  deleteTradePlan,
-  generatePositionSizing,
-  generateRiskCheck,
-  generateReview,
-  generateTradeRecord,
-} from "./actions";
+import { createTradePlan, deleteTradePlan } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -86,34 +79,10 @@ function formatOptionalValue(value: unknown): string {
   return String(value);
 }
 
-function formatBoolean(value: boolean): string {
-  return value ? "是" : "否";
-}
-
 function formatDate(value: Date): string {
   return value.toLocaleString("zh-CN", {
     hour12: false,
   });
-}
-
-function formatOptionalDate(value: Date | null | undefined): string {
-  return value ? formatDate(value) : "-";
-}
-
-function formatReasons(value: unknown): string {
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item)).join("；");
-  }
-
-  return JSON.stringify(value);
 }
 
 function getRiskLevelClass(level: string): string {
@@ -132,20 +101,28 @@ function getRiskLevelClass(level: string): string {
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
-function isGreaterThanTwo(value: unknown): boolean {
-  if (value === null || value === undefined || value === "") {
-    return false;
+function getReviewStatus(
+  tradeRecord: { review: unknown | null } | null,
+): string {
+  if (!tradeRecord) {
+    return "无法复盘";
   }
 
-  return Number(value) > 2;
+  return tradeRecord.review ? "已复盘" : "未复盘";
 }
 
-function isLessThanOne(value: unknown): boolean {
-  if (value === null || value === undefined || value === "") {
-    return false;
+function getReviewStatusClass(
+  tradeRecord: { review: unknown | null } | null,
+): string {
+  if (!tradeRecord) {
+    return "border-zinc-200 bg-zinc-50 text-zinc-600";
   }
 
-  return Number(value) < 1;
+  if (tradeRecord.review) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-800";
 }
 
 export default async function TradePlansPage({
@@ -191,6 +168,9 @@ export default async function TradePlansPage({
             <h1 className="mt-3 text-3xl font-semibold tracking-normal">
               交易计划
             </h1>
+            <p className="mt-2 text-sm text-zinc-500">
+              列表只保留概要，完整风险检查、仓位计算、交易记录和复盘请进入详情页查看。
+            </p>
           </div>
           <div className="rounded border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
             当前共 {tradePlans.length} 条
@@ -403,49 +383,18 @@ export default async function TradePlansPage({
 
         <section className="overflow-hidden rounded border border-zinc-200 bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[3600px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3 font-medium">币种</th>
                   <th className="px-4 py-3 font-medium">操作类型</th>
                   <th className="px-4 py-3 font-medium">方向</th>
                   <th className="px-4 py-3 font-medium">计划投入金额</th>
-                  <th className="px-4 py-3 font-medium">入场价</th>
-                  <th className="px-4 py-3 font-medium">止损价</th>
-                  <th className="px-4 py-3 font-medium">止盈价</th>
-                  <th className="px-4 py-3 font-medium">杠杆倍数</th>
-                  <th className="px-4 py-3 font-medium">保证金模式</th>
-                  <th className="px-4 py-3 font-medium">情绪状态</th>
-                  <th className="px-4 py-3 font-medium">是否追涨</th>
-                  <th className="px-4 py-3 font-medium">宏观事件</th>
-                  <th className="px-4 py-3 font-medium">设置止损</th>
-                  <th className="px-4 py-3 font-medium">最近风险分</th>
-                  <th className="px-4 py-3 font-medium">最近风险等级</th>
-                  <th className="px-4 py-3 font-medium">风险原因</th>
-                  <th className="px-4 py-3 font-medium">系统建议</th>
-                  <th className="px-4 py-3 font-medium">最近仓位价值</th>
-                  <th className="px-4 py-3 font-medium">止损亏损金额</th>
-                  <th className="px-4 py-3 font-medium">止盈盈利金额</th>
-                  <th className="px-4 py-3 font-medium">盈亏比</th>
-                  <th className="px-4 py-3 font-medium">
-                    止损亏损占总资金比例
-                  </th>
-                  <th className="px-4 py-3 font-medium">仓位建议</th>
-                  <th className="px-4 py-3 font-medium">交易记录状态</th>
-                  <th className="px-4 py-3 font-medium">记录入场时间</th>
-                  <th className="px-4 py-3 font-medium">记录出场时间</th>
-                  <th className="px-4 py-3 font-medium">记录入场价</th>
-                  <th className="px-4 py-3 font-medium">记录出场价</th>
-                  <th className="px-4 py-3 font-medium">记录投入金额</th>
-                  <th className="px-4 py-3 font-medium">记录杠杆倍数</th>
-                  <th className="px-4 py-3 font-medium">盈亏金额</th>
-                  <th className="px-4 py-3 font-medium">盈亏比例</th>
-                  <th className="px-4 py-3 font-medium">是否遵守计划</th>
-                  <th className="px-4 py-3 font-medium">出场原因</th>
-                  <th className="px-4 py-3 font-medium">
-                    复盘状态 / 复盘摘要
-                  </th>
                   <th className="px-4 py-3 font-medium">计划状态</th>
+                  <th className="px-4 py-3 font-medium">最近风险等级</th>
+                  <th className="px-4 py-3 font-medium">止损亏损占比</th>
+                  <th className="px-4 py-3 font-medium">交易记录</th>
+                  <th className="px-4 py-3 font-medium">复盘</th>
                   <th className="px-4 py-3 font-medium">创建时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
@@ -455,7 +404,7 @@ export default async function TradePlansPage({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-zinc-500"
-                      colSpan={38}
+                      colSpan={11}
                     >
                       暂无交易计划
                     </td>
@@ -465,13 +414,6 @@ export default async function TradePlansPage({
                     const latestRiskCheck = plan.riskChecks[0];
                     const latestPositionSizing = plan.positionSizings[0];
                     const tradeRecord = plan.tradeRecord;
-                    const review = tradeRecord?.review;
-                    const isPositionTooHeavy = isGreaterThanTwo(
-                      latestPositionSizing?.lossPercentOfTotalCapital,
-                    );
-                    const hasLowRiskRewardRatio = isLessThanOne(
-                      latestPositionSizing?.riskRewardRatio,
-                    );
 
                     return (
                       <tr
@@ -494,37 +436,7 @@ export default async function TradePlansPage({
                           {formatOptionalValue(plan.plannedAmount)}
                         </td>
                         <td className="px-4 py-4">
-                          {formatOptionalValue(plan.entryPrice)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatOptionalValue(plan.stopLossPrice)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatOptionalValue(plan.takeProfitPrice)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatOptionalValue(plan.leverage)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {getOptionLabel(marginModeOptions, plan.marginMode)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {getOptionLabel(
-                            emotionStateOptions,
-                            plan.emotionState,
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatBoolean(plan.isChasingPrice)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatBoolean(plan.hasMacroEvent)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {formatBoolean(plan.hasStopLoss)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latestRiskCheck ? latestRiskCheck.score : "未检查"}
+                          {getOptionLabel(statusOptions, plan.status)}
                         </td>
                         <td className="px-4 py-4">
                           {latestRiskCheck ? (
@@ -537,313 +449,49 @@ export default async function TradePlansPage({
                                 riskLevelOptions,
                                 latestRiskCheck.level,
                               )}
-                              {latestRiskCheck.level === "EXTREME"
-                                ? "，不建议操作"
-                                : ""}
                             </span>
                           ) : (
                             "未检查"
                           )}
                         </td>
-                        <td className="max-w-md px-4 py-4 text-zinc-700">
-                          {latestRiskCheck
-                            ? formatReasons(latestRiskCheck.reasons)
-                            : "未检查"}
-                        </td>
-                        <td className="max-w-md px-4 py-4 text-zinc-700">
-                          {latestRiskCheck ? (
-                            <div className="grid gap-2">
-                              {latestRiskCheck.level === "EXTREME" ? (
-                                <div className="inline-flex w-fit rounded border border-red-700 bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">
-                                  不建议操作
-                                </div>
-                              ) : null}
-                              <div>
-                                {formatOptionalValue(
-                                  latestRiskCheck.suggestion,
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            "未检查"
-                          )}
-                        </td>
                         <td className="px-4 py-4">
                           {latestPositionSizing
                             ? formatOptionalValue(
-                                latestPositionSizing.positionValue,
+                                latestPositionSizing.lossPercentOfTotalCapital,
                               )
                             : "未计算"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latestPositionSizing
-                            ? formatOptionalValue(
-                                latestPositionSizing.lossAmountAtStop,
-                              )
-                            : "未计算"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latestPositionSizing
-                            ? formatOptionalValue(
-                                latestPositionSizing.profitAmountAtTakeProfit,
-                              )
-                            : "未计算"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latestPositionSizing ? (
-                            <div className="grid gap-2">
-                              <span>
-                                {formatOptionalValue(
-                                  latestPositionSizing.riskRewardRatio,
-                                )}
-                              </span>
-                              {hasLowRiskRewardRatio ? (
-                                <span className="inline-flex w-fit rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
-                                  盈亏比偏低
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            "未计算"
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          {latestPositionSizing ? (
-                            <div className="grid gap-2">
-                              <span>
-                                {formatOptionalValue(
-                                  latestPositionSizing.lossPercentOfTotalCapital,
-                                )}
-                              </span>
-                              {isPositionTooHeavy ? (
-                                <span className="inline-flex w-fit rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
-                                  止损亏损超过总资金 2%，仓位可能过重。
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            "未计算"
-                          )}
-                        </td>
-                        <td className="max-w-md px-4 py-4 text-zinc-700">
-                          {latestPositionSizing ? (
-                            <div className="grid gap-2">
-                              {isPositionTooHeavy ? (
-                                <div className="inline-flex w-fit rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
-                                  仓位过重
-                                </div>
-                              ) : null}
-                              <div>
-                                {formatOptionalValue(
-                                  latestPositionSizing.suggestion,
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            "未计算"
-                          )}
                         </td>
                         <td className="px-4 py-4">
                           {tradeRecord ? (
                             <span className="inline-flex rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                              已生成
+                              已生成交易记录
                             </span>
                           ) : (
                             <span className="inline-flex rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600">
-                              未生成
-                            </span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
-                          {tradeRecord
-                            ? formatDate(tradeRecord.entryTime)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
-                          {tradeRecord
-                            ? formatOptionalDate(tradeRecord.exitTime)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(tradeRecord.entryPrice)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(tradeRecord.exitPrice)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(tradeRecord.amount)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(tradeRecord.leverage)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(
-                                tradeRecord.profitLossAmount,
-                              )
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatOptionalValue(
-                                tradeRecord.profitLossPercent,
-                              )
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="px-4 py-4">
-                          {tradeRecord
-                            ? formatBoolean(tradeRecord.followedPlan)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="max-w-md px-4 py-4 text-zinc-700">
-                          {tradeRecord
-                            ? formatOptionalValue(tradeRecord.exitReason)
-                            : "未生成交易记录"}
-                        </td>
-                        <td className="max-w-lg px-4 py-4 text-zinc-700">
-                          {!tradeRecord ? (
-                            <span className="inline-flex rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-600">
-                              无法复盘
-                            </span>
-                          ) : review ? (
-                            <div className="grid gap-2">
-                              <span className="inline-flex w-fit rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                                已复盘
-                              </span>
-                              <div className="grid gap-1 text-xs leading-5 text-zinc-600">
-                                <div>
-                                  <span className="font-medium text-zinc-800">
-                                    遵守计划：
-                                  </span>
-                                  {formatOptionalValue(
-                                    review.followedPlanReview,
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-zinc-800">
-                                    情绪状态：
-                                  </span>
-                                  {formatOptionalValue(review.emotionReview)}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-zinc-800">
-                                    错误总结：
-                                  </span>
-                                  {formatOptionalValue(review.mistake)}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-zinc-800">
-                                    经验教训：
-                                  </span>
-                                  {formatOptionalValue(review.lesson)}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-zinc-800">
-                                    下次改进：
-                                  </span>
-                                  {formatOptionalValue(review.nextAction)}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="inline-flex rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
-                              未复盘
+                              未生成交易记录
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          {getOptionLabel(statusOptions, plan.status)}
+                          <span
+                            className={`inline-flex rounded border px-2 py-1 text-xs font-medium ${getReviewStatusClass(
+                              tradeRecord,
+                            )}`}
+                          >
+                            {getReviewStatus(tradeRecord)}
+                          </span>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-zinc-600">
                           {formatDate(plan.createdAt)}
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex flex-col gap-2">
-                            <form
-                              action={generateRiskCheck.bind(null, plan.id)}
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/trade-plans/${plan.id}`}
+                              className="inline-flex h-9 items-center rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
                             >
-                              <button
-                                type="submit"
-                                className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                              >
-                                生成风险检查
-                              </button>
-                            </form>
-                            <form
-                              action={generatePositionSizing.bind(
-                                null,
-                                plan.id,
-                              )}
-                            >
-                              <button
-                                type="submit"
-                                className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                              >
-                                生成仓位计算
-                              </button>
-                            </form>
-                            {tradeRecord ? (
-                              <button
-                                type="button"
-                                disabled
-                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
-                              >
-                                已生成交易记录
-                              </button>
-                            ) : (
-                              <form
-                                action={generateTradeRecord.bind(
-                                  null,
-                                  plan.id,
-                                )}
-                              >
-                                <button
-                                  type="submit"
-                                  className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                                >
-                                  生成交易记录
-                                </button>
-                              </form>
-                            )}
-                            {!tradeRecord ? (
-                              <button
-                                type="button"
-                                disabled
-                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
-                              >
-                                请先生成交易记录
-                              </button>
-                            ) : review ? (
-                              <button
-                                type="button"
-                                disabled
-                                className="h-9 rounded border border-zinc-200 px-3 text-sm font-medium text-zinc-400"
-                              >
-                                已生成复盘
-                              </button>
-                            ) : (
-                              <form
-                                action={generateReview.bind(
-                                  null,
-                                  tradeRecord.id,
-                                )}
-                              >
-                                <button
-                                  type="submit"
-                                  className="h-9 rounded border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-                                >
-                                  生成复盘
-                                </button>
-                              </form>
-                            )}
+                              查看详情
+                            </Link>
                             <form action={deleteTradePlan.bind(null, plan.id)}>
                               <button
                                 type="submit"

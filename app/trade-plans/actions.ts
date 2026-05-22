@@ -115,6 +115,11 @@ function redirectWithError(message: string): never {
   redirect(`/trade-plans?error=${encodeURIComponent(message)}`);
 }
 
+function revalidateTradePlanPages(tradePlanId: string) {
+  revalidatePath("/trade-plans");
+  revalidatePath(`/trade-plans/${tradePlanId}`);
+}
+
 function normalizeTradePlanForm(formData: FormData) {
   const coinSymbol = getText(formData, "coinSymbol").toUpperCase();
   const operationType = getText(formData, "operationType");
@@ -382,8 +387,8 @@ export async function generateRiskCheck(tradePlanId: string) {
     redirectWithError(getDatabaseErrorMessage(error));
   }
 
-  revalidatePath("/trade-plans");
-  redirect("/trade-plans");
+  revalidateTradePlanPages(tradePlanId);
+  redirect(`/trade-plans/${tradePlanId}`);
 }
 
 export async function generatePositionSizing(tradePlanId: string) {
@@ -434,8 +439,8 @@ export async function generatePositionSizing(tradePlanId: string) {
     redirectWithError(getDatabaseErrorMessage(error));
   }
 
-  revalidatePath("/trade-plans");
-  redirect("/trade-plans");
+  revalidateTradePlanPages(tradePlanId);
+  redirect(`/trade-plans/${tradePlanId}`);
 }
 
 export async function generateTradeRecord(tradePlanId: string) {
@@ -520,14 +525,16 @@ export async function generateTradeRecord(tradePlanId: string) {
     redirectWithError(getDatabaseErrorMessage(error));
   }
 
-  revalidatePath("/trade-plans");
-  redirect("/trade-plans");
+  revalidateTradePlanPages(tradePlanId);
+  redirect(`/trade-plans/${tradePlanId}`);
 }
 
 export async function generateReview(tradeRecordId: string) {
   if (!tradeRecordId.trim()) {
     redirectWithError("缺少交易记录 ID。");
   }
+
+  let tradePlanId: string | null = null;
 
   try {
     const tradeRecord = await prisma.tradeRecord.findUnique({
@@ -541,6 +548,8 @@ export async function generateReview(tradeRecordId: string) {
     if (!tradeRecord) {
       throw new Error("交易记录不存在，无法生成复盘。");
     }
+
+    tradePlanId = tradeRecord.tradePlanId;
 
     if (tradeRecord.review) {
       throw new Error("该交易记录已经生成复盘，请不要重复生成。");
@@ -566,5 +575,11 @@ export async function generateReview(tradeRecordId: string) {
   }
 
   revalidatePath("/trade-plans");
+
+  if (tradePlanId) {
+    revalidatePath(`/trade-plans/${tradePlanId}`);
+    redirect(`/trade-plans/${tradePlanId}`);
+  }
+
   redirect("/trade-plans");
 }
