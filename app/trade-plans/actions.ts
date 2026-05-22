@@ -245,6 +245,13 @@ function normalizeTradePlanForm(formData: FormData) {
 function getDatabaseErrorMessage(error: unknown): string {
   if (
     error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  ) {
+    return "操作失败：该记录可能已经存在，请刷新页面后重试。";
+  }
+
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2003"
   ) {
     return "删除交易计划失败：存在关联数据或外键约束，请先处理关联记录。";
@@ -452,13 +459,20 @@ export async function generateTradeRecord(tradePlanId: string) {
     }
 
     const latestRiskCheck = tradePlan.riskChecks[0];
+    const latestPositionSizing = tradePlan.positionSizings[0];
 
     if (!latestRiskCheck) {
       throw new Error("请先生成风险检查，再生成交易记录。");
     }
 
-    if (tradePlan.positionSizings.length === 0) {
+    if (!latestPositionSizing) {
       throw new Error("请先生成仓位计算，再生成交易记录。");
+    }
+
+    if (!latestPositionSizing.isValid) {
+      throw new Error(
+        "最近一次仓位计算无效，请先修正交易计划并重新生成仓位计算。",
+      );
     }
 
     if (latestRiskCheck.level === "EXTREME") {
