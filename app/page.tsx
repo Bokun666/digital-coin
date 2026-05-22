@@ -43,6 +43,26 @@ const marketRegimeOptions = [
   { value: "LOW_VOLATILITY", label: "低波动" },
 ];
 
+const marketBiasOptions = [
+  { value: "UNKNOWN", label: "未知" },
+  { value: "BULLISH", label: "偏多" },
+  { value: "BEARISH", label: "偏空" },
+  { value: "NEUTRAL", label: "中性" },
+  { value: "RANGE", label: "震荡" },
+  { value: "VOLATILE", label: "高波动" },
+];
+
+const strategyTypeOptions = [
+  { value: "OTHER", label: "其他" },
+  { value: "DCA", label: "定投策略" },
+  { value: "SPOT_GRID", label: "现货网格策略" },
+  { value: "FUTURES_GRID", label: "合约网格策略" },
+  { value: "FUTURES_TRAIN", label: "合约训练策略" },
+  { value: "ALTCOIN", label: "山寨币机会策略" },
+  { value: "MINING_COIN", label: "新矿币机会策略" },
+  { value: "STABLE_EARN", label: "稳定币理财策略" },
+];
+
 function getOptionLabel(
   options: Array<{ value: string; label: string }>,
   value: string,
@@ -80,11 +100,13 @@ export default async function Home() {
     reviewCount,
     assetSnapshotCount,
     marketSnapshotCount,
+    userConclusionCount,
     recentTradePlans,
     recentTradeRecords,
     recentReviews,
     latestAssetSnapshot,
     recentMarketSnapshots,
+    recentUserConclusions,
   ] = await Promise.all([
     prisma.watchCoin.count(),
     prisma.tradePlan.count(),
@@ -106,6 +128,7 @@ export default async function Home() {
     prisma.review.count(),
     prisma.assetSnapshot.count(),
     prisma.marketSnapshot.count(),
+    prisma.userConclusion.count(),
     prisma.tradePlan.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -128,6 +151,13 @@ export default async function Home() {
       orderBy: { snapshotTime: "desc" },
       take: 5,
     }),
+    prisma.userConclusion.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        marketSnapshot: true,
+      },
+    }),
   ]);
 
   const stats = [
@@ -141,6 +171,7 @@ export default async function Home() {
     { label: "复盘数量", value: reviewCount },
     { label: "资产快照数量", value: assetSnapshotCount },
     { label: "市场快照数量", value: marketSnapshotCount },
+    { label: "用户判断数量", value: userConclusionCount },
   ];
 
   return (
@@ -158,7 +189,7 @@ export default async function Home() {
 
         <section>
           <h2 className="text-lg font-semibold">核心统计</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {stats.map((stat) => (
               <div
                 key={stat.label}
@@ -226,6 +257,20 @@ export default async function Home() {
               <p className="mt-2 text-sm leading-6 text-zinc-600">
                 手动记录 K线、宏观、合约、链上和新闻摘要，为后续 AI
                 分析提供上下文。
+              </p>
+            </Link>
+
+            <Link
+              href="/user-conclusions"
+              className="rounded border border-zinc-200 bg-white p-5 transition hover:border-zinc-400"
+            >
+              <div className="text-sm font-medium text-zinc-500">
+                /user-conclusions
+              </div>
+              <div className="mt-3 text-xl font-semibold">用户判断</div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                在 AI
+                分析前记录自己的市场方向、置信度、判断理由和计划策略。
               </p>
             </Link>
           </div>
@@ -302,6 +347,65 @@ export default async function Home() {
             </div>
           ) : (
             <p className="mt-4 text-sm text-zinc-500">暂无资产快照</p>
+          )}
+        </section>
+
+        <section className="rounded border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">最近用户判断</h2>
+            <Link
+              href="/user-conclusions"
+              className="text-sm font-medium text-zinc-500 hover:text-zinc-900"
+            >
+              管理用户判断
+            </Link>
+          </div>
+          {recentUserConclusions.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">暂无用户判断</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
+                  <tr>
+                    <th className="py-3 pr-4 font-medium">币种</th>
+                    <th className="px-4 py-3 font-medium">用户方向判断</th>
+                    <th className="px-4 py-3 font-medium">用户置信度</th>
+                    <th className="px-4 py-3 font-medium">计划策略</th>
+                    <th className="py-3 pl-4 font-medium">创建时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentUserConclusions.map((conclusion) => (
+                    <tr
+                      key={conclusion.id}
+                      className="border-b border-zinc-100 last:border-0"
+                    >
+                      <td className="py-3 pr-4 font-semibold">
+                        {conclusion.symbol}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getOptionLabel(
+                          marketBiasOptions,
+                          conclusion.userBias,
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {conclusion.userConfidence}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getOptionLabel(
+                          strategyTypeOptions,
+                          conclusion.intendedStrategy,
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap py-3 pl-4 text-zinc-600">
+                        {formatDate(conclusion.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 

@@ -88,6 +88,26 @@ enum MarketRegime {
   UNKNOWN
 }
 
+enum MarketBias {
+  BULLISH
+  BEARISH
+  NEUTRAL
+  RANGE
+  VOLATILE
+  UNKNOWN
+}
+
+enum StrategyType {
+  DCA
+  SPOT_GRID
+  FUTURES_GRID
+  FUTURES_TRAIN
+  ALTCOIN
+  MINING_COIN
+  STABLE_EARN
+  OTHER
+}
+
 model WatchCoin {
   id              String          @id @default(cuid())
   symbol          String          @db.VarChar(32)
@@ -248,9 +268,29 @@ model MarketSnapshot {
   dataSources     String?      @db.Text
   screenshotPath  String?      @db.Text
   notes           String?      @db.Text
+  userConclusions UserConclusion[]
   createdAt       DateTime     @default(now())
 
   @@index([symbol])
   @@index([snapshotTime])
   @@index([marketRegime])
+}
+
+model UserConclusion {
+  id                String          @id @default(cuid())
+  symbol            String          @db.VarChar(32)
+  marketSnapshotId  String?
+  userBias          MarketBias      @default(UNKNOWN)
+  userConfidence    Int
+  userReason        String          @db.Text
+  intendedStrategy  StrategyType    @default(OTHER)
+  plannedParameters String?         @db.Text
+  marketSnapshot    MarketSnapshot? @relation(fields: [marketSnapshotId], references: [id], onDelete: SetNull)
+  createdAt         DateTime        @default(now())
+
+  @@index([symbol])
+  @@index([marketSnapshotId])
+  @@index([userBias])
+  @@index([intendedStrategy])
+  @@index([createdAt])
 }
